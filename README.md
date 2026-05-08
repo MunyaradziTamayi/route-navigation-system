@@ -12,6 +12,21 @@ ng serve
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
+## Backend configuration
+
+By default the UI calls the backend at `http://localhost:8080`.
+
+You can override this in the app under **Backend → API base URL**, or by setting:
+
+- `localStorage["routenav_api_base_url"] = "http://your-backend:8080"`
+- `window.ROUTENAV_API_BASE_URL = "http://your-backend:8080"` (set before Angular loads)
+
+Expected backend endpoints (adjust in `src/app/core/api.config.ts` if yours differ):
+
+- `POST /api/routes/compute`
+- `GET /api/journeys?limit=20`
+- `GET /api/journeys/{id}`
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
