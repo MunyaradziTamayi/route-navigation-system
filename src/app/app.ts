@@ -208,15 +208,8 @@ export class App {
       this.errorMessage.set(e?.message ?? 'Failed to calculate route.');
     } finally {
       this.isRouting.set(false);
+    }
   }
-
-  private formatDistance(distanceKm: number): string {
-    const unit = this.unit();
-    if (unit === 'km') return `${distanceKm.toFixed(2)} km`;
-    const milesPerKm = 0.621371;
-    return `${(distanceKm * milesPerKm).toFixed(2)} miles`;
-  }
-}
 
   private async ensureSelected(
     query: string,
@@ -245,4 +238,10 @@ export class App {
     });
   }
 
+  private formatDistance(distanceKm: number): string {
+    const unit = this.unit();
+    if (unit === 'km') return `${distanceKm.toFixed(2)} km`;
+    const milesPerKm = 0.621371;
+    return `${(distanceKm * milesPerKm).toFixed(2)} miles`;
+  }
 }
