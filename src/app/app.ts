@@ -1266,7 +1266,8 @@ export class App {
       clientLabel: item.clientLabel,
       durationMinutes: item.durationMinutes,
       notes: item.notes,
-      scheduledDate: item.assignedAt
+      scheduledDate: item.assignedAt,
+      status: item.status
     };
   }
 
@@ -1291,7 +1292,7 @@ export class App {
       durationMinutes: this.normalizedVisitsPerDay(row.durationMinutes ?? Math.round(Number(row.durationSeconds ?? 1800) / 60)),
       visitsPerDay: this.normalizedVisitsPerDay(row.visitsPerDay ?? 1),
       assignedAt: String(row.scheduledDate ?? row.createdAt ?? new Date().toISOString()),
-      status: 'pending' as const
+      status: row.status === 'completed' ? 'completed' : 'pending'
     };
   }
 

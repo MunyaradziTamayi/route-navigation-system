@@ -18,6 +18,7 @@ export type VisitPayload = {
   durationSeconds: number;
   geoJson: any;
   scheduledDate?: string;
+  status?: 'pending' | 'completed';
 };
 
 export type VisitResponse = VisitPayload & {
