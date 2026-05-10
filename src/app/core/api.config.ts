@@ -1,4 +1,4 @@
-export const DEFAULT_API_BASE_URL = 'http://localhost:8080';
+export const DEFAULT_API_BASE_URL = 'https://route-navigator-backend.onrender.com';
 
 export function getApiBaseUrl(): string {
   const fromWindow = (globalThis as any)?.ROUTENAV_API_BASE_URL;
