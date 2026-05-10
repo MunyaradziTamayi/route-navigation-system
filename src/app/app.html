@@ -1,154 +1,812 @@
-<div class="shell">
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand__title">RouteNav</div>
-      <div class="brand__subtitle">Shortest path navigator</div>
+<div class="care-app" [class.is-nav-collapsed]="isSidebarCollapsed()">
+  <div
+    class="app-notice"
+    *ngIf="notice() as currentNotice"
+    [class.app-notice--success]="currentNotice.type === 'success'"
+    [class.app-notice--error]="currentNotice.type === 'error'"
+    role="status"
+    aria-live="polite"
+  >
+    <div class="app-notice__icon" aria-hidden="true">
+      <svg *ngIf="currentNotice.type === 'success'" viewBox="0 0 24 24">
+        <path d="M20 6 9 17l-5-5"/>
+      </svg>
+      <svg *ngIf="currentNotice.type === 'error'" viewBox="0 0 24 24">
+        <path d="M12 8v5"/>
+        <path d="M12 17h.01"/>
+        <path d="M10.3 4.1 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 4.1a2 2 0 0 0-3.4 0Z"/>
+      </svg>
+    </div>
+    <div class="app-notice__message">{{ currentNotice.message }}</div>
+    <button type="button" aria-label="Dismiss message" (click)="dismissNotice()">x</button>
+  </div>
+
+  <aside class="care-sidebar">
+    <button
+      class="care-sidebar__toggle"
+      type="button"
+      (click)="toggleSidebar()"
+      [attr.aria-label]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <div class="care-brand">
+      <div class="care-brand__copy">
+        <div class="care-brand__title">CareRoute</div>
+        <div class="care-brand__subtitle">Mileage calculator</div>
+      </div>
     </div>
 
-    <form class="panel" [formGroup]="form" (ngSubmit)="submit()">
-      <div class="field">
-        <label for="origin">Origin</label>
-        <input
-          id="origin"
-          type="text"
-          formControlName="origin"
-          autocomplete="off"
-          placeholder="Search a place…"
-        >
-        <div class="suggestions" *ngIf="originSuggestions().length > 0">
-          <button
-            class="suggestion"
-            type="button"
-            *ngFor="let s of originSuggestions()"
-            (click)="selectOrigin(s)"
-          >
-            <div class="suggestion__main">{{ s.displayName }}</div>
-          </button>
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="destination">Destination</label>
-        <input
-          id="destination"
-          type="text"
-          formControlName="destination"
-          autocomplete="off"
-          placeholder="Search a place…"
-        >
-        <div class="suggestions" *ngIf="destinationSuggestions().length > 0">
-          <button
-            class="suggestion"
-            type="button"
-            *ngFor="let s of destinationSuggestions()"
-            (click)="selectDestination(s)"
-          >
-            <div class="suggestion__main">{{ s.displayName }}</div>
-          </button>
-        </div>
-      </div>
-
-      <button class="btn btn--primary" type="submit" [disabled]="isRouting()">
-        {{ isRouting() ? 'Calculating…' : 'Calculate route' }}
+    <nav class="care-nav" aria-label="Main navigation">
+      <button
+        class="care-nav__item"
+        type="button"
+        [class.is-active]="activePage() === 'dashboard'"
+        (click)="setActivePage('dashboard')"
+      >
+        <span class="care-nav__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-6h5v6"/></svg>
+        </span>
+        <span class="care-nav__label">Dashboard</span>
       </button>
+      <button
+        class="care-nav__item"
+        type="button"
+        [class.is-active]="activePage() === 'schedule'"
+        (click)="setActivePage('schedule')"
+      >
+        <span class="care-nav__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M8 3v4"/><path d="M16 3v4"/><path d="M4 8h16"/><path d="M5 5h14v15H5z"/></svg>
+        </span>
+        <span class="care-nav__label">Schedule</span>
+      </button>
+      <button
+        class="care-nav__item"
+        type="button"
+        [class.is-active]="activePage() === 'workers'"
+        (click)="setActivePage('workers')"
+      >
+        <span class="care-nav__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M16 18c0-2.2-1.8-4-4-4H8c-2.2 0-4 1.8-4 4v1"/><circle cx="10" cy="8" r="3"/><path d="M18 19v-1.5c0-1.7-1-3.1-2.5-3.8"/><path d="M15.5 5.4a3 3 0 0 1 0 5.2"/></svg>
+        </span>
+        <span class="care-nav__label">Workers</span>
+      </button>
+      <button
+        class="care-nav__item"
+        type="button"
+        [class.is-active]="activePage() === 'route'"
+        (click)="setActivePage('route')"
+      >
+        <span class="care-nav__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="20" cy="18" r="2"/></svg>
+        </span>
+        <span class="care-nav__label">Routes & Visits</span>
+      </button>
+      <button
+        class="care-nav__item"
+        type="button"
+        [class.is-active]="activePage() === 'reports'"
+        (click)="setActivePage('reports')"
+      >
+        <span class="care-nav__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M12 16V8"/><path d="M16 16v-7"/></svg>
+        </span>
+        <span class="care-nav__label">Reports</span>
+      </button>
+      <button
+        class="care-nav__item"
+        type="button"
+        [class.is-active]="activePage() === 'settings'"
+        (click)="setActivePage('settings')"
+      >
+        <span class="care-nav__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.4 1a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.5 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.5-2-1.5c.1-.4.1-.8.1-1.2Z"/></svg>
+        </span>
+        <span class="care-nav__label">Settings</span>
+      </button>
+    </nav>
 
-      <div class="error" *ngIf="errorMessage()">{{ errorMessage() }}</div>
-
-      <div class="results">
-        <div class="result">
-          <div class="result__label">Distance</div>
-          <div class="result__value">{{ distanceText() }}</div>
-        </div>
-        <div class="result">
-          <div class="result__label">ETA</div>
-          <div class="result__value">{{ durationText() }}</div>
-        </div>
-        <button class="btn btn--ghost" type="button" (click)="clearRoute()" [disabled]="!route()">
-          Clear
-        </button>
-      </div>
-    </form>
-
-    <div class="panel panel--flat">
-      <div class="panel__title">
-        Saved journeys
-        <button class="btn btn--ghost btn--sm" type="button" (click)="refreshJourneys()">
-          Refresh
-        </button>
-      </div>
-
-      <div class="muted" *ngIf="isLoadingJourneys()">Loading…</div>
-      <div class="muted" *ngIf="!isLoadingJourneys() && journeys().length === 0">
-        No journeys found.
-      </div>
-
-      <div class="journeys" *ngIf="journeys().length > 0">
-        <button class="journey" type="button" *ngFor="let j of journeys()" (click)="loadJourney(j)">
-          <div class="journey__main">{{ j.originLabel }} → {{ j.destinationLabel }}</div>
-          <div class="journey__meta">
-            <span>{{ j.distanceKm.toFixed(2) }} km</span>
-            <span>•</span>
-            <span>{{ j.createdAt | date: 'medium' }}</span>
-          </div>
-        </button>
-      </div>
-    </div>
-
-    <div class="footer">
-      Geocoding by Nominatim • Tiles © OpenStreetMap
-    </div>
   </aside>
 
-  <main class="map">
-    <app-map-canvas
-      [origin]="originSelected()"
-      [destination]="destinationSelected()"
-      [routeGeoJson]="route()?.geoJson ?? null"
-    ></app-map-canvas>
+  <main class="care-main">
+    <section class="dashboard" *ngIf="activePage() === 'dashboard'">
+      <header class="dashboard__header">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Overview - {{ today | date: 'EEEE, d MMMM y' }}</p>
+        </div>
+      </header>
 
-    <section class="map-bottom">
-      <div class="map-bottom__card">
-        <div class="map-bottom__title">Mileage calculator</div>
+      <div class="stats-grid" aria-label="Dashboard summary">
+        <article class="stat-card">
+          <div class="stat-card__label">Workers</div>
+          <div class="stat-card__value">{{ workers().length }}</div>
+          <div class="stat-card__meta">registered</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Today's visits</div>
+          <div class="stat-card__value">{{ todaySchedules().length }}</div>
+          <div class="stat-card__meta">{{ todaySchedules().filter(s => s.status === 'pending').length }} pending, {{ todaySchedules().filter(s => s.status === 'completed').length }} completed</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Schedules</div>
+          <div class="stat-card__value">{{ schedules().length }}</div>
+          <div class="stat-card__meta">total days planned</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Status</div>
+          <div class="stat-card__value stat-card__value--word">Ready</div>
+        </article>
+      </div>
 
-        <div class="map-bottom__grid">
-          <div class="field field--tight">
-            <label for="unit">Unit</label>
-            <select id="unit" [formControl]="unitControl">
-              <option value="miles">Miles</option>
-              <option value="km">Kilometres</option>
-            </select>
-          </div>
-
-          <div class="field field--tight">
-            <label for="trips">Trips</label>
-            <input id="trips" type="number" min="1" step="1" [formControl]="tripsControl">
-          </div>
-
-          <div class="field field--tight checkbox checkbox--tight">
-            <label>
-              <input type="checkbox" [formControl]="roundTripControl">
-              Round trip (there and back)
-            </label>
-          </div>
-
-          <div class="map-bottom__result">
-            <div class="muted muted--tiny" *ngIf="!route()">Calculate a route to compute miles.</div>
-            <div class="calc calc--stack" *ngIf="route()">
-              <div class="calc__row">
-                <div class="calc__label">One trip</div>
-                <div class="calc__value">{{ oneTripText() }}</div>
+      <div class="dashboard-grid">
+        <section class="dashboard-card dashboard-card--empty">
+          <h2>Today's schedules</h2>
+          <p *ngIf="todaySchedules().length === 0">No schedules for today. Head to <button type="button" (click)="setActivePage('route')">Route</button> to calculate and assign a route.</p>
+          <div class="schedule-list schedule-list--compact" *ngIf="todaySchedules().length > 0">
+            <article class="schedule-item" *ngFor="let item of todaySchedules()">
+              <div>
+                <h3>{{ workerNamesLabel(item.workerNames) }}</h3>
+                <p>{{ item.destinationLabel }}</p>
+                <span>{{ item.startTime }} - {{ item.endTime }} - {{ item.visitsPerDay }} visit{{ item.visitsPerDay === 1 ? '' : 's' }}/day</span>
               </div>
-              <div class="calc__row">
-                <div class="calc__label">Round trip</div>
-                <div class="calc__value">{{ roundTripText() }}</div>
+              <strong>{{ item.distanceKm.toFixed(2) }} km</strong>
+            </article>
+          </div>
+        </section>
+
+        <section class="dashboard-card">
+          <h2>Quick start guide</h2>
+          <div class="guide-list">
+            <div class="guide-item">
+              <div class="guide-item__number">1</div>
+              <div>
+                <h3>Add workers</h3>
+                <p>Go to Workers -> Add your care workers with their home address</p>
               </div>
-              <div class="calc__row calc__row--total">
-                <div class="calc__label">Total (with trips)</div>
-                <div class="calc__value">{{ totalDistanceText() }}</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-item__number">2</div>
+              <div>
+                <h3>Build a schedule</h3>
+                <p>Go to Routes & Visits -> Create Visits ,Optimise Route to get shortest distance and Assign Workers </p>
+              </div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-item__number">3</div>
+              <div>
+                <h3>Optimise route</h3>
+                <p>Click "Optimise route" to get the shortest route with mileage</p>
               </div>
             </div>
           </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="placeholder-page" *ngIf="activePage() === 'workers'">
+      <header class="workers-header">
+        <div>
+          <h1>Workers</h1>
+          <p>{{ workers().length }} care workers registered</p>
         </div>
+        <button class="workers-add" type="button" (click)="openWorkerForm()">
+          <span>+</span>
+          Add worker
+        </button>
+      </header>
+
+      <section class="worker-form" *ngIf="isWorkerFormOpen()">
+        <div class="worker-form__title">{{ editingWorkerId() ? 'Edit worker' : 'Add worker' }}</div>
+        <div class="worker-form__grid">
+          <div class="field">
+            <label for="workerName">Name</label>
+            <input id="workerName" type="text" [formControl]="workerNameControl" placeholder="Full name">
+          </div>
+          <div class="field">
+            <label for="workerEmail">Email</label>
+            <input id="workerEmail" type="email" [formControl]="workerEmailControl" placeholder="name@example.com">
+          </div>
+          <div class="field">
+            <label for="workerPhone">Phone number</label>
+            <input id="workerPhone" type="tel" [formControl]="workerPhoneControl" placeholder="+263 77 000 0000">
+          </div>
+          <div class="field">
+            <label for="workerArea">Area</label>
+            <input id="workerArea" type="text" [formControl]="workerAreaControl" placeholder="North route">
+          </div>
+          <div class="field worker-form__address">
+            <label for="workerHomeAddress">Home address</label>
+            <input id="workerHomeAddress" type="text" [formControl]="workerHomeAddressControl" autocomplete="off" placeholder="Search home address">
+            <div class="suggestions suggestions--light" *ngIf="workerAddressSuggestions().length > 0">
+              <button
+                class="suggestion"
+                type="button"
+                *ngFor="let s of workerAddressSuggestions()"
+                (click)="selectWorkerHomeAddress(s)"
+              >
+                <div class="suggestion__main">{{ s.displayName }}</div>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="visit-form__actions">
+          <button class="workers-add" type="button" (click)="saveWorker()">
+            {{ editingWorkerId() ? 'Save worker' : 'Create worker' }}
+          </button>
+          <button class="visit-form__cancel" type="button" (click)="closeWorkerForm()">Cancel</button>
+        </div>
+        <div class="form-message" *ngIf="workerFormMessage()">{{ workerFormMessage() }}</div>
+      </section>
+
+      <section class="workers-search">
+        <div class="field">
+          <label for="workerSearch">Search workers</label>
+          <input id="workerSearch" type="search" [formControl]="workerSearchControl" placeholder="Search name, email, area, address">
+        </div>
+      </section>
+
+      <div class="workers-table">
+        <div class="workers-table__head">
+          <div>Name</div>
+          <div>Email</div>
+          <div>Phone</div>
+          <div>Area</div>
+          <div>Home address</div>
+          <div></div>
+        </div>
+
+        <div class="workers-table__row" *ngFor="let worker of filteredWorkers()">
+          <div>{{ worker.name }}</div>
+          <div>{{ worker.email }}</div>
+          <div>{{ worker.phone }}</div>
+          <div>{{ worker.area }}</div>
+          <div [class.is-muted]="!worker.homeAddress">
+            {{ worker.homeAddress || 'Not set' }}
+          </div>
+          <div class="workers-table__actions">
+            <button type="button" aria-label="Edit worker" (click)="editWorker(worker)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+            <button class="is-danger" type="button" aria-label="Delete worker" (click)="deleteWorker(worker.id)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="empty-state empty-state--compact" *ngIf="filteredWorkers().length === 0">
+        No workers match your search.
+      </div>
+    </section>
+
+    <section class="schedule-page" *ngIf="activePage() === 'schedule'">
+      <header class="schedule-header">
+        <div>
+          <h1>Schedule &amp; Route</h1>
+          <p>Build daily visit schedules, track completion status, and plan visits for future dates</p>
+        </div>
+      </header>
+
+      <section class="schedule-controls" aria-label="Schedule filters">
+        <div class="field">
+          <label for="scheduleWorker">Care worker</label>
+          <select id="scheduleWorker" [formControl]="scheduleFilterWorkerControl">
+            <option *ngFor="let worker of workers()" [value]="worker.id">{{ worker.name }}</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="scheduleDate">Date</label>
+          <input id="scheduleDate" type="date" [formControl]="scheduleDateControl">
+        </div>
+
+        <div class="field schedule-controls__search">
+          <label for="scheduleSearch">Search</label>
+          <input id="scheduleSearch" type="search" [formControl]="scheduleSearchControl" placeholder="Search visits, addresses, workers">
+        </div>
+      </section>
+
+      <div class="visits-heading">
+        <div>
+          <h2>Visits</h2>
+          <p>
+            Starting from:
+            {{ configuredStartAddress() || 'Set a starting address in Settings' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="visit-dialog-backdrop" *ngIf="isScheduleFormOpen()">
+        <form class="visit-dialog" (ngSubmit)="createOrUpdateVisit()">
+          <div class="visit-dialog__header">
+            <h2>{{ editingScheduleId() ? 'Edit visit' : 'Add visit' }}</h2>
+            <button type="button" aria-label="Close visit form" (click)="closeScheduleForm()">x</button>
+          </div>
+
+          <div class="visit-dialog__grid">
+            <div class="field">
+              <label for="visitClientLabel">Client / visit label *</label>
+              <input id="visitClientLabel" type="text" [formControl]="scheduleClientLabelControl" placeholder="e.g. Mrs. Thompson">
+            </div>
+
+            <div class="field">
+              <label for="visitTime">Visit time</label>
+              <input id="visitTime" type="time" [formControl]="scheduleVisitTimeControl">
+            </div>
+
+            <div class="field visit-dialog__wide">
+              <label for="visitDestination">Address *</label>
+              <input id="visitDestination" type="text" [formControl]="scheduleDestinationControl" autocomplete="off" placeholder="Search a Zimbabwe place or road">
+              <div class="suggestions suggestions--light" *ngIf="scheduleDestinationSuggestions().length > 0">
+                <button
+                  class="suggestion"
+                  type="button"
+                  *ngFor="let s of scheduleDestinationSuggestions()"
+                  (click)="selectScheduleDestination(s)"
+                >
+                  <div class="suggestion__main">{{ s.displayName }}</div>
+                </button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="visitDuration">Duration (minutes)</label>
+              <input id="visitDuration" type="number" min="1" step="1" [formControl]="scheduleDurationControl">
+            </div>
+
+            <div class="field">
+              <label for="visitNotes">Notes</label>
+              <input id="visitNotes" type="text" [formControl]="scheduleNotesControl" placeholder="Optional notes...">
+            </div>
+
+            <div class="worker-picker visit-dialog__wide">
+              <label>Assign workers *</label>
+              <div class="worker-picker__grid">
+                <button
+                  class="worker-chip"
+                  type="button"
+                  *ngFor="let worker of workers()"
+                  [class.is-selected]="isScheduleWorkerSelected(worker.id)"
+                  (click)="toggleScheduleWorker(worker.id)"
+                >
+                  {{ worker.name }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-message" *ngIf="scheduleFormMessage()">
+            {{ scheduleFormMessage() }}
+          </div>
+
+          <div class="visit-dialog__actions">
+            <button class="visit-form__cancel" type="button" (click)="closeScheduleForm()">Cancel</button>
+            <button class="workers-add" type="submit" [disabled]="isRouting()">
+              {{ isRouting() ? (editingScheduleId() ? 'Updating...' : 'Calculating...') : editingScheduleId() ? 'Update' : 'Continue to route' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="form-message schedule-page__message" *ngIf="!isScheduleFormOpen() && scheduleFormMessage()">
+        {{ scheduleFormMessage() }}
+      </div>
+
+      <div class="schedule-list" *ngIf="pendingSchedules().length > 0">
+        <h3>Pending Visits</h3>
+        <article class="schedule-item" *ngFor="let item of pendingSchedules()">
+          <div>
+            <h3>{{ item.clientLabel || item.destinationLabel }}</h3>
+            <p>{{ item.destinationLabel }}</p>
+            <span>{{ workerNamesLabel(item.workerNames) }} - {{ item.startTime }} - {{ item.durationMinutes }} min - {{ formatMiles(item.distanceKm) }} - {{ item.assignedAt | date: 'mediumDate' }}</span>
+            <span *ngIf="item.notes">{{ item.notes }}</span>
+          </div>
+          <div class="schedule-item__side">
+            <button class="visit-map-link" type="button" (click)="viewVisitOnMap(item)">View on map</button>
+            <div class="workers-table__actions">
+              <button type="button" aria-label="Mark as completed" (click)="toggleVisitStatus(item.id)" title="Mark as completed">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+              </button>
+              <button type="button" aria-label="Edit visit" (click)="editVisit(item)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </button>
+              <button class="is-danger" type="button" aria-label="Delete visit" (click)="deleteVisit(item.id)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="schedule-list" *ngIf="completedSchedules().length > 0">
+        <h3>Completed Visits</h3>
+        <article class="schedule-item schedule-item--completed" *ngFor="let item of completedSchedules()">
+          <div>
+            <h3>{{ item.clientLabel || item.destinationLabel }}</h3>
+            <p>{{ item.destinationLabel }}</p>
+            <span>{{ workerNamesLabel(item.workerNames) }} - {{ item.startTime }} - {{ item.durationMinutes }} min - {{ formatMiles(item.distanceKm) }} - {{ item.assignedAt | date: 'mediumDate' }}</span>
+            <span *ngIf="item.notes">{{ item.notes }}</span>
+          </div>
+          <div class="schedule-item__side">
+            <button class="visit-map-link" type="button" (click)="viewVisitOnMap(item)">View on map</button>
+            <div class="workers-table__actions">
+              <button type="button" aria-label="Mark as pending" (click)="toggleVisitStatus(item.id)" title="Mark as pending">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              </button>
+              <button type="button" aria-label="Edit visit" (click)="editVisit(item)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </button>
+              <button class="is-danger" type="button" aria-label="Delete visit" (click)="deleteVisit(item.id)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="empty-state empty-state--visits" *ngIf="filteredSchedules().length === 0">
+        <div class="empty-state__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M8 3v4"/><path d="M16 3v4"/><path d="M5 8h14"/><path d="M6 5h12v15H6z"/><path d="M12 12v5"/><path d="M10 14h4"/></svg>
+        </div>
+        <h3>No visits yet</h3>
+        <p>Add the first client visit for this day.</p>
+      </div>
+    </section>
+
+    <section class="reports-page" *ngIf="activePage() === 'reports'">
+      <header class="reports-header">
+        <h1>Reports</h1>
+        <p>Mileage summary across workers and dates</p>
+      </header>
+
+      <div class="reports-filter">
+        <div class="field">
+          <label for="reportFrom">From</label>
+          <input id="reportFrom" type="date" [formControl]="reportFromControl">
+        </div>
+        <div class="field">
+          <label for="reportTo">To</label>
+          <input id="reportTo" type="date" [formControl]="reportToControl">
+        </div>
+        <div class="field">
+          <label for="reportWorker">Care worker</label>
+          <select id="reportWorker" [formControl]="reportWorkerControl">
+            <option value="all">All workers</option>
+            <option *ngFor="let worker of workers()" [value]="worker.id">{{ worker.name }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="reportSearch">Search</label>
+          <input id="reportSearch" type="search" [formControl]="reportSearchControl" placeholder="Search visits, workers, addresses">
+        </div>
+      </div>
+
+      <div class="report-summary" *ngIf="reportRows().length > 0">
+        <article class="stat-card">
+          <div class="stat-card__label">Visits</div>
+          <div class="stat-card__value">{{ reportTotalVisits() }}</div>
+          <div class="stat-card__meta">in selected range</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Distance</div>
+          <div class="stat-card__value">{{ (reportTotalDistanceKm() * 0.621371).toFixed(2) }}</div>
+          <div class="stat-card__meta">miles travelled</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Workers</div>
+          <div class="stat-card__value">{{ reportRows().length }}</div>
+          <div class="stat-card__meta">with visits</div>
+        </article>
+      </div>
+
+      <div class="reports-table" *ngIf="reportRows().length > 0">
+        <div class="reports-table__head">
+          <div>Worker</div>
+          <div>Visits</div>
+          <div>Miles</div>
+          <div>First visit</div>
+          <div>Last visit</div>
+        </div>
+        <div class="reports-table__row" *ngFor="let row of reportRows()">
+          <div>{{ row.workerName }}</div>
+          <div>{{ row.visits }}</div>
+          <div>{{ formatMiles(row.distanceKm) }}</div>
+          <div>{{ row.firstVisit }}</div>
+          <div>{{ row.lastVisit }}</div>
+        </div>
+      </div>
+
+      <div class="schedule-list report-visit-list" *ngIf="reportVisits().length > 0">
+        <article class="schedule-item" *ngFor="let item of reportVisits()">
+          <div>
+            <h3>{{ item.destinationLabel }}</h3>
+            <p>{{ item.originLabel }} -> {{ item.destinationLabel }}</p>
+            <span>{{ workerNamesLabel(item.workerNames) }} - {{ item.assignedAt | date: 'mediumDate' }} - {{ item.startTime }} to {{ item.endTime }}</span>
+          </div>
+          <strong>{{ formatMiles(item.distanceKm) }}</strong>
+        </article>
+      </div>
+
+      <div class="reports-empty" *ngIf="reportRows().length === 0">
+        <div class="reports-empty__icon">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <h2>No schedule data</h2>
+        <p>Build a schedule on the Schedule page, then run optimisation to generate reports.</p>
+      </div>
+    </section>
+
+    <section class="settings-page" *ngIf="activePage() === 'settings'">
+      <header class="reports-header">
+        <h1>Settings</h1>
+        <p>Set the shared route starting address used when creating visits.</p>
+      </header>
+
+      <section class="settings-card">
+        <div class="field">
+          <label for="settingsStartAddress">Starting address</label>
+          <input
+            id="settingsStartAddress"
+            type="text"
+            [formControl]="settingsStartAddressControl"
+            autocomplete="off"
+            placeholder="Search a Zimbabwe place or road"
+          >
+          <div class="suggestions suggestions--light" *ngIf="settingsStartAddressSuggestions().length > 0">
+            <button
+              class="suggestion"
+              type="button"
+              *ngFor="let s of settingsStartAddressSuggestions()"
+              (click)="selectSettingsStartAddress(s)"
+            >
+              <div class="suggestion__main">{{ s.displayName }}</div>
+            </button>
+          </div>
+        </div>
+
+        <div class="visit-form__actions">
+          <button class="workers-add" type="button" (click)="saveSettings()">Save settings</button>
+        </div>
+
+        <div class="form-message" *ngIf="settingsMessage()">{{ settingsMessage() }}</div>
+      </section>
+    </section>
+
+    <section class="route-view" *ngIf="activePage() === 'route'">
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand__title">Create Visits and Assign Workers</div>
+            <div class="brand__subtitle">Shortest path navigator</div>
+          </div>
+
+          <form class="panel" [formGroup]="form" (ngSubmit)="submit()">
+            <div class="field">
+              <label for="origin">Origin</label>
+              <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <input
+                  id="origin"
+                  type="text"
+                  formControlName="origin"
+                  autocomplete="off"
+                  placeholder="Search a place..."
+                  style="flex: 1;"
+                >
+                <button
+                  type="button"
+                  class="btn btn--ghost"
+                  title="Use the origin address from Settings"
+                  (click)="useSettingsAsOrigin()"
+                  [disabled]="!settingsStartSelected()"
+                  style="padding: 8px 12px; white-space: nowrap;"
+                >
+                  📍 Use Settings
+                </button>
+              </div>
+              <div class="suggestions" *ngIf="originSuggestions().length > 0">
+                <button
+                  class="suggestion"
+                  type="button"
+                  *ngFor="let s of originSuggestions()"
+                  (click)="selectOrigin(s)"
+                >
+                  <div class="suggestion__main">{{ s.displayName }}</div>
+                </button>
+              </div>
+              <div style="font-size: 12px; color: #666; margin-top: 6px;" *ngIf="originSelected() || useSettingsOrigin()">
+                <span *ngIf="originSelected() && !useSettingsOrigin()">
+                  ✓ Origin: <strong>{{ originSelected()?.displayName }}</strong>
+                  <button type="button" class="link-btn" (click)="clearOriginAndUseManual()" style="margin-left: 8px; color: #0066cc; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0; font-size: 12px;">
+                    Change
+                  </button>
+                </span>
+                <span *ngIf="useSettingsOrigin()">
+                  ✓ Using settings origin: <strong>{{ settingsStartSelected()?.displayName }}</strong>
+                  <button type="button" class="link-btn" (click)="clearOriginAndUseManual()" style="margin-left: 8px; color: #0066cc; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0; font-size: 12px;">
+                    Enter manual origin
+                  </button>
+                </span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="destination">Destination</label>
+              <input
+                id="destination"
+                type="text"
+                formControlName="destination"
+                autocomplete="off"
+                placeholder="Search a place..."
+              >
+              <div class="suggestions" *ngIf="destinationSuggestions().length > 0">
+                <button
+                  class="suggestion"
+                  type="button"
+                  *ngFor="let s of destinationSuggestions()"
+                  (click)="selectDestination(s)"
+                >
+                  <div class="suggestion__main">{{ s.displayName }}</div>
+                </button>
+              </div>
+            </div>
+
+            <button class="btn btn--primary" type="submit" [disabled]="isRouting()">
+              {{ isRouting() ? 'Calculating...' : 'Optimise Route' }}
+            </button>
+
+            <div class="error" *ngIf="errorMessage()">{{ errorMessage() }}</div>
+
+            <div class="results">
+              <div class="result">
+                <div class="result__label">Distance</div>
+                <div class="result__value">{{ distanceText() }}</div>
+              </div>
+              <div class="result">
+                <div class="result__label">ETA</div>
+                <div class="result__value">{{ durationText() }}</div>
+              </div>
+              <button class="btn btn--ghost" type="button" (click)="clearRoute()" [disabled]="!route()">
+                Clear
+              </button>
+            </div>
+          </form>
+
+          <div class="panel panel--flat assignment-panel">
+            <div class="panel__title" *ngIf="!pendingScheduleVisit()">
+              Assign Visit
+            </div>
+
+            <div class="confirm-visit" *ngIf="pendingScheduleVisit() as pending">
+              <div class="panel__title">Confirm visit</div>
+              <p>{{ pending.originLabel }} -> {{ pending.destinationLabel }}</p>
+              <p>{{ workerNamesLabel(pending.workerNames) }}</p>
+              <p>{{ pending.startTime }} - {{ pending.endTime }} - {{ pending.visitsPerDay }} visit{{ pending.visitsPerDay === 1 ? '' : 's' }}/day</p>
+              <strong>{{ pending.distanceKm.toFixed(2) }} km</strong>
+              <div class="confirm-visit__actions">
+                <button class="btn btn--primary" type="button" (click)="confirmPendingVisit()">
+                  Confirm visit
+                </button>
+                <button class="btn btn--ghost" type="button" (click)="cancelPendingVisit()">
+                  Cancel
+                </button>
+              </div>
+            </div>
+
+            <ng-container *ngIf="!pendingScheduleVisit()">
+            <div class="field">
+              <label>Workers</label>
+              <div class="route-worker-list">
+                <button
+                  class="route-worker"
+                  type="button"
+                  *ngFor="let worker of workers()"
+                  [class.is-selected]="isRouteWorkerSelected(worker.id)"
+                  (click)="toggleRouteWorker(worker.id)"
+                >
+                  <span>{{ worker.name }}</span>
+                  <small>{{ worker.area }}</small>
+                </button>
+              </div>
+            </div>
+
+            <div class="row row--two">
+              <div class="field">
+                <label for="routeVisitStart">From</label>
+                <input id="routeVisitStart" type="time" [formControl]="routeVisitStartControl">
+              </div>
+              <div class="field">
+                <label for="routeVisitEnd">To</label>
+                <input id="routeVisitEnd" type="time" [formControl]="routeVisitEndControl">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="routeVisitsPerDay">Visits per day</label>
+              <input id="routeVisitsPerDay" type="number" min="1" step="1" [formControl]="routeVisitsPerDayControl">
+            </div>
+
+            <div class="field">
+              <label for="routeClientLabel">Client / visit label</label>
+              <input id="routeClientLabel" type="text" [formControl]="routeClientLabelControl" placeholder="e.g. Mrs. Thompson">
+            </div>
+
+            <div class="field">
+              <label for="routeNotes">Notes</label>
+              <input id="routeNotes" type="text" [formControl]="routeNotesControl" placeholder="Optional notes...">
+            </div>
+
+            <button class="btn btn--primary" type="button" (click)="assignRouteToWorker()" [disabled]="!route()">
+              Assign workers and save visit
+            </button>
+            </ng-container>
+
+            <div class="assignment-message" *ngIf="assignmentMessage()">
+              {{ assignmentMessage() }}
+            </div>
+          </div>
+
+          <div class="footer">
+            Geocoding by Nominatim - Tiles OpenStreetMap
+          </div>
+        </aside>
+
+        <main class="map">
+          <app-map-canvas
+            [origin]="originSelected()"
+            [destination]="destinationSelected()"
+            [routeGeoJson]="route()?.geoJson ?? null"
+          ></app-map-canvas>
+
+          <section class="map-bottom">
+            <div class="map-bottom__card">
+              <div class="map-bottom__title">Mileage calculator</div>
+
+              <div class="map-bottom__grid">
+                <div class="field field--tight">
+                  <label for="unit">Unit</label>
+                  <select id="unit" [formControl]="unitControl">
+                    <option value="miles">Miles</option>
+                    <option value="km">Kilometres</option>
+                  </select>
+                </div>
+
+                <div class="field field--tight">
+                  <label for="trips">Trips</label>
+                  <input id="trips" type="number" min="1" step="1" [formControl]="tripsControl">
+                </div>
+
+                <div class="field field--tight checkbox checkbox--tight">
+                  <label>
+                    <input type="checkbox" [formControl]="roundTripControl">
+                    Round trip (there and back)
+                  </label>
+                </div>
+
+                <div class="map-bottom__result">
+                  <div class="muted muted--tiny" *ngIf="!route()">Calculate a route to compute miles.</div>
+                  <div class="calc calc--stack" *ngIf="route()">
+                    <div class="calc__row">
+                      <div class="calc__label">One trip</div>
+                      <div class="calc__value">{{ oneTripText() }}</div>
+                    </div>
+                    <div class="calc__row">
+                      <div class="calc__label">Round trip</div>
+                      <div class="calc__value">{{ roundTripText() }}</div>
+                    </div>
+                    <div class="calc__row calc__row--total">
+                      <div class="calc__label">Total (with trips)</div>
+                      <div class="calc__value">{{ totalDistanceText() }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
       </div>
     </section>
   </main>

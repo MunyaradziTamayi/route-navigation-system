@@ -15,11 +15,10 @@
   overflow: auto;
   padding: 20px;
   background:
-    radial-gradient(1000px 500px at 20% 0%, rgba(129, 80, 255, 0.35), transparent 55%),
-    radial-gradient(800px 500px at 90% 0%, rgba(47, 208, 255, 0.25), transparent 50%),
-    #0b1020;
+    linear-gradient(180deg, rgba(47, 208, 255, 0.08), transparent 38%),
+    #05070d;
   color: #e7eaff;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
 }
 
 .brand__title {
@@ -125,10 +124,14 @@ select:focus {
 
 .btn--primary {
   width: 100%;
-  border: 0;
-  background: linear-gradient(135deg, rgba(129, 80, 255, 0.95), rgba(47, 208, 255, 0.9));
-  color: #061022;
+  border: 1px solid rgba(47, 208, 255, 0.26);
+  background: #111827;
+  color: #f8fbff;
   font-weight: 700;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #172033;
 }
 
 .btn--ghost {
@@ -173,6 +176,21 @@ select:focus {
 .suggestion__main {
   font-size: 12px;
   line-height: 1.3;
+}
+
+.suggestions--light {
+  background: #ffffff;
+  border-color: #cfd8e3;
+  box-shadow: 0 12px 30px rgba(28, 52, 75, 0.16);
+}
+
+.suggestions--light .suggestion {
+  color: #061a32;
+  border-bottom-color: #e4ebf2;
+}
+
+.suggestions--light .suggestion:hover {
+  background: #eef7fc;
 }
 
 .error {
@@ -294,6 +312,29 @@ select:focus {
   opacity: 0.75;
 }
 
+.confirm-visit {
+  display: grid;
+  gap: 8px;
+}
+
+.confirm-visit p {
+  margin: 0;
+  color: rgba(231, 234, 255, 0.82);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.confirm-visit strong {
+  color: #2fd0ff;
+  font-size: 14px;
+}
+
+.confirm-visit__actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .map {
   position: relative;
   height: 100vh;
@@ -340,7 +381,7 @@ select:focus {
   height: 10px;
   margin-right: 8px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(129, 80, 255, 1), rgba(47, 208, 255, 1));
+  background: #2fd0ff;
 }
 
 .map-bottom__grid {
