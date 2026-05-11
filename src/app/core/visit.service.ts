@@ -29,6 +29,7 @@ export type VisitResponse = VisitPayload & {
   originLon?: number;
   destinationLat?: number;
   destinationLon?: number;
+  straightLineDistanceKm?: number;
   createdAt: string;
   updatedAt?: string;
 };

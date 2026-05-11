@@ -367,67 +367,72 @@
     <section class="worker-mileage-page" *ngIf="activePage() === 'worker-mileage'">
       <header class="reports-header">
         <h1>Workers Mileage Calculator</h1>
-        <p>Upload the monthly visit worksheet and download calculated mileage by staff number.</p>
+        <p>Upload a visit worksheet and download calculated mileage split by visit month.</p>
       </header>
 
-      <section class="mileage-upload-card">
-        <div class="mileage-upload-card__intro">
-          <h2>Monthly mileage upload</h2>
-          <p>The workbook must include Staff Number, Date, Visit Time, and Address columns.</p>
-        </div>
+      <div class="mileage-upload-toolbar">
+        <button class="workers-add app-primary-action" type="button" (click)="openMileageUpload()">
+          Upload file
+        </button>
+      </div>
 
-        <div class="field mileage-upload-card__field">
-          <label for="mileageFile">Excel file</label>
-          <input
-            id="mileageFile"
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            (change)="onMileageFileSelected($event)"
-          >
-        </div>
+      <div class="visit-dialog-backdrop" *ngIf="isMileageUploadOpen()">
+        <section class="visit-dialog mileage-upload-dialog">
+          <div class="visit-dialog__header">
+            <h2>Upload mileage file</h2>
+            <button type="button" aria-label="Close mileage upload" [disabled]="isMileageUploading()" (click)="closeMileageUpload()">x</button>
+          </div>
 
-        <div class="mileage-upload-card__selected" *ngIf="mileageFile() as file">
-          <span>{{ file.name }}</span>
-          <small>{{ (file.size / 1024).toFixed(1) }} KB</small>
-        </div>
+          <div class="mileage-upload-card__intro">
+            <p>The workbook must include Staff Number, Date, Visit Time, and Address columns.</p>
+          </div>
 
-        <div class="visit-form__actions">
-          <button
-            class="workers-add app-primary-action"
-            type="button"
-            [disabled]="!mileageFile() || isMileageUploading()"
-            (click)="uploadWorkerMileage()"
-          >
-            {{ isMileageUploading() ? 'Calculating...' : 'Calculate mileage' }}
-          </button>
-        </div>
+          <div class="field mileage-upload-card__field">
+            <label for="mileageFile">Excel file</label>
+            <input
+              id="mileageFile"
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              (change)="onMileageFileSelected($event)"
+            >
+          </div>
 
-        <div class="form-message" *ngIf="mileageUploadMessage()">
-          {{ mileageUploadMessage() }}
-        </div>
-      </section>
+          <div class="mileage-upload-card__selected" *ngIf="mileageFile() as file">
+            <span>{{ file.name }}</span>
+            <small>{{ (file.size / 1024).toFixed(1) }} KB</small>
+          </div>
+
+          <div class="form-message" *ngIf="mileageUploadMessage()">
+            {{ mileageUploadMessage() }}
+          </div>
+
+          <div class="visit-dialog__actions">
+            <button class="visit-form__cancel" type="button" [disabled]="isMileageUploading()" (click)="closeMileageUpload()">Cancel</button>
+            <button
+              class="workers-add app-primary-action"
+              type="button"
+              [disabled]="!mileageFile() || isMileageUploading()"
+              (click)="uploadWorkerMileage()"
+            >
+              {{ isMileageUploading() ? 'Calculating...' : 'Calculate mileage' }}
+            </button>
+          </div>
+        </section>
+      </div>
 
 
       <section class="mileage-report-filters">
         <div class="field">
-          <label for="mileageFrom">From date</label>
-          <input id="mileageFrom" type="date" [formControl]="mileageFilterFromControl">
+          <label for="mileageReportMonth">Report month</label>
+          <input id="mileageReportMonth" type="search" [formControl]="mileageReportMonthControl" placeholder="May, May 2026, or 2026-05">
         </div>
         <div class="field">
-          <label for="mileageTo">To date</label>
-          <input id="mileageTo" type="date" [formControl]="mileageFilterToControl">
-        </div>
-        <div class="field">
-          <label for="mileageWorkerName">Worker name</label>
-          <input id="mileageWorkerName" type="search" [formControl]="mileageFilterWorkerControl" placeholder="Search worker name">
+          <label for="mileageReportYear">Report year</label>
+          <input id="mileageReportYear" type="number" min="1900" step="1" [formControl]="mileageReportYearControl" placeholder="2026">
         </div>
         <div class="field">
           <label for="mileageStaffNumber">Staff number</label>
           <input id="mileageStaffNumber" type="search" [formControl]="mileageFilterStaffControl" placeholder="Search staff number">
-        </div>
-        <div class="field mileage-report-filters__location">
-          <label for="mileageLocation">Excel location</label>
-          <input id="mileageLocation" type="search" [formControl]="mileageFilterLocationControl" placeholder="Search address from uploaded Excel">
         </div>
       </section>
       <section class="mileage-result" *ngIf="selectedMileageReport() as report">
@@ -454,20 +459,27 @@
             <div class="stat-card__meta">in this report</div>
           </article>
           <article class="stat-card">
-            <div class="stat-card__label">Total mileage</div>
+            <div class="stat-card__label">Driving mileage</div>
             <div class="stat-card__value">{{ selectedMileageTotal().toFixed(2) }}</div>
             <div class="stat-card__meta">from uploaded visits</div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card__label">Straight-line mileage</div>
+            <div class="stat-card__value">{{ selectedStraightLineMileageTotal().toFixed(2) }}</div>
+            <div class="stat-card__meta">direct distance</div>
           </article>
         </div>
 
         <div class="mileage-table" *ngIf="filteredSelectedMileageRows().length > 0">
           <div class="mileage-table__head">
             <div>Staff number</div>
-            <div>Total mileage</div>
+            <div>Driving mileage</div>
+            <div>Straight-line mileage</div>
           </div>
           <div class="mileage-table__row" *ngFor="let row of filteredSelectedMileageRows()">
             <div>{{ row.staffNumber }}</div>
             <div>{{ formatMileageValue(row.totalMileage) }}</div>
+            <div>{{ formatMileageValue(row.totalStraightLineMileage) }}</div>
           </div>
         </div>
 
@@ -492,7 +504,7 @@
       </section>
 
       <section class="mileage-history" *ngIf="filteredMileageReports().length > 0">
-        <h2>Previous reports</h2>
+        <h2>Monthly reports</h2>
         <div class="mileage-history__list">
           <button
             class="mileage-history__item"
@@ -627,7 +639,7 @@
           <div>
             <h3>{{ item.clientLabel || item.destinationLabel }}</h3>
             <p>{{ item.destinationLabel }}</p>
-            <span>{{ workerNamesLabel(item.workerNames) }} - {{ item.startTime }} - {{ item.durationMinutes }} min - {{ formatMiles(item.distanceKm) }} - {{ item.assignedAt | date: 'mediumDate' }}</span>
+            <span>{{ workerNamesLabel(item.workerNames) }} - {{ item.startTime }} - {{ item.durationMinutes }} min - {{ formatMiles(item.distanceKm) }} driving / {{ formatMiles(item.straightLineDistanceKm) }} direct - {{ item.assignedAt | date: 'mediumDate' }}</span>
             <span *ngIf="item.notes">{{ item.notes }}</span>
           </div>
           <div class="schedule-item__side">
@@ -653,7 +665,7 @@
           <div>
             <h3>{{ item.clientLabel || item.destinationLabel }}</h3>
             <p>{{ item.destinationLabel }}</p>
-            <span>{{ workerNamesLabel(item.workerNames) }} - {{ item.startTime }} - {{ item.durationMinutes }} min - {{ formatMiles(item.distanceKm) }} - {{ item.assignedAt | date: 'mediumDate' }}</span>
+            <span>{{ workerNamesLabel(item.workerNames) }} - {{ item.startTime }} - {{ item.durationMinutes }} min - {{ formatMiles(item.distanceKm) }} driving / {{ formatMiles(item.straightLineDistanceKm) }} direct - {{ item.assignedAt | date: 'mediumDate' }}</span>
             <span *ngIf="item.notes">{{ item.notes }}</span>
           </div>
           <div class="schedule-item__side">
@@ -731,7 +743,8 @@
         <div class="reports-table__head">
           <div>Worker</div>
           <div>Visits</div>
-          <div>Miles</div>
+          <div>Driving miles</div>
+          <div>Direct miles</div>
           <div>First visit</div>
           <div>Last visit</div>
         </div>
@@ -739,6 +752,7 @@
           <div>{{ row.workerName }}</div>
           <div>{{ row.visits }}</div>
           <div>{{ formatMiles(row.distanceKm) }}</div>
+          <div>{{ formatMiles(row.straightLineDistanceKm) }}</div>
           <div>{{ row.firstVisit }}</div>
           <div>{{ row.lastVisit }}</div>
         </div>
@@ -751,7 +765,7 @@
             <p>{{ item.originLabel }} -> {{ item.destinationLabel }}</p>
             <span>{{ workerNamesLabel(item.workerNames) }} - {{ item.assignedAt | date: 'mediumDate' }} - {{ item.startTime }} to {{ item.endTime }}</span>
           </div>
-          <strong>{{ formatMiles(item.distanceKm) }}</strong>
+          <strong>{{ formatMiles(item.distanceKm) }} driving / {{ formatMiles(item.straightLineDistanceKm) }} direct</strong>
         </article>
       </div>
 
@@ -888,8 +902,12 @@
 
             <div class="results">
               <div class="result">
-                <div class="result__label">Distance</div>
+                <div class="result__label">Driving distance</div>
                 <div class="result__value">{{ distanceText() }}</div>
+              </div>
+              <div class="result">
+                <div class="result__label">Straight-line distance</div>
+                <div class="result__value">{{ straightLineDistanceText() }}</div>
               </div>
               <div class="result">
                 <div class="result__label">ETA</div>
@@ -911,7 +929,7 @@
               <p>{{ pending.originLabel }} -> {{ pending.destinationLabel }}</p>
               <p>{{ workerNamesLabel(pending.workerNames) }}</p>
               <p>{{ pending.startTime }} - {{ pending.endTime }} - {{ pending.visitsPerDay }} visit{{ pending.visitsPerDay === 1 ? '' : 's' }}/day</p>
-              <strong>{{ pending.distanceKm.toFixed(2) }} km</strong>
+              <strong>{{ pending.distanceKm.toFixed(2) }} km driving / {{ pending.straightLineDistanceKm.toFixed(2) }} km direct</strong>
               <div class="confirm-visit__actions">
                 <button class="btn btn--primary" type="button" (click)="confirmPendingVisit()">
                   Confirm visit

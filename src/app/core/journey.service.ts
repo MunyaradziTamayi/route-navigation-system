@@ -8,6 +8,7 @@ export type JourneySummary = {
   originLabel: string;
   destinationLabel: string;
   distanceKm: number;
+  straightLineDistanceKm: number;
   createdAt: string;
 };
 
@@ -28,6 +29,9 @@ export class JourneyService {
           ),
           distanceKm: Number(
             j.distanceKm ?? j.distance_km ?? (j.distanceMeters ?? j.distance_m ?? 0) / 1000
+          ),
+          straightLineDistanceKm: Number(
+            j.straightLineDistanceKm ?? j.straight_line_distance_km ?? 0
           ),
           createdAt: String(j.createdAt ?? j.created_at ?? j.timestamp ?? new Date().toISOString())
         })) as JourneySummary[];

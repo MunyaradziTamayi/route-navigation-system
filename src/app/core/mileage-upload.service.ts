@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from './api.config';
 export type WorkerMileageReportRow = {
   staffNumber: string;
   totalMileage: number;
+  totalStraightLineMileage: number;
 };
 
 export type WorkerMileageVisit = {
@@ -35,25 +36,43 @@ export type MileageDownloadResult = {
   filename: string;
 };
 
+export type MileageReportFilters = {
+  month?: string;
+  year?: string | number | null;
+};
+
 @Injectable({ providedIn: 'root' })
 export class MileageUploadService {
   private readonly http = inject(HttpClient);
 
-  async upload(file: File): Promise<WorkerMileageReport> {
+  async upload(file: File, filters: MileageReportFilters = {}): Promise<WorkerMileageReport[]> {
     const body = new FormData();
+    let params = new HttpParams();
+    const month = filters.month?.trim();
+    const year = filters.year == null ? '' : String(filters.year).trim();
+
+    if (month) params = params.set('month', month);
+    if (year) params = params.set('year', year);
+
     body.append('file', file, file.name);
 
     try {
       return await firstValueFrom(
-        this.http.post<WorkerMileageReport>(API_ENDPOINTS.mileageUpload(), body)
+        this.http.post<WorkerMileageReport[]>(API_ENDPOINTS.mileageUpload(), body, { params })
       );
     } catch (error) {
       throw new Error(await this.errorMessage(error));
     }
   }
 
-  listReports(month?: string) {
-    const params = month?.trim() ? new HttpParams().set('month', month.trim()) : undefined;
+  listReports(filters: MileageReportFilters = {}) {
+    let params = new HttpParams();
+    const month = filters.month?.trim();
+    const year = filters.year == null ? '' : String(filters.year).trim();
+
+    if (month) params = params.set('month', month);
+    if (year) params = params.set('year', year);
+
     return this.http.get<WorkerMileageReport[]>(API_ENDPOINTS.mileageReports(), { params });
   }
 

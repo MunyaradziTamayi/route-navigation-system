@@ -1073,7 +1073,7 @@ body {
 .reports-table__head,
 .reports-table__row {
   display: grid;
-  grid-template-columns: minmax(160px, 1.4fr) repeat(4, minmax(90px, 1fr));
+  grid-template-columns: minmax(160px, 1.4fr) repeat(5, minmax(90px, 1fr));
   align-items: center;
   gap: 16px;
   padding: 0 16px;
@@ -1142,6 +1142,21 @@ body {
   padding: 22px 20px 20px;
   background: #ffffff;
   box-shadow: 0 2px 4px rgba(28, 52, 75, 0.08);
+}
+
+.mileage-upload-toolbar {
+  max-width: 940px;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 18px;
+}
+
+.mileage-upload-dialog {
+  gap: 16px;
+}
+
+.mileage-upload-dialog .mileage-upload-card__intro p {
+  margin-top: 0;
 }
 
 .mileage-upload-card__intro h2 {
@@ -1257,7 +1272,7 @@ body {
 
 .mileage-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -1273,7 +1288,7 @@ body {
 .mileage-table__head,
 .mileage-table__row {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(140px, 0.7fr);
+  grid-template-columns: minmax(160px, 1fr) repeat(2, minmax(140px, 0.7fr));
   align-items: center;
   gap: 16px;
   padding: 0 16px;
@@ -1641,7 +1656,7 @@ body {
 
   .mileage-table__head,
   .mileage-table__row {
-    min-width: 480px;
+    min-width: 640px;
   }
 
   .reports-table {
@@ -1650,7 +1665,7 @@ body {
 
   .reports-table__head,
   .reports-table__row {
-    min-width: 680px;
+    min-width: 820px;
   }
 
   .schedule-controls {
@@ -1807,17 +1822,13 @@ body {
 
 .mileage-report-filters {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 20px;
 }
 
 .mileage-report-filters .field {
   margin: 0;
-}
-
-.mileage-report-filters__location {
-  grid-column: 1 / -1;
 }
 
 .uploaded-visits-table small {

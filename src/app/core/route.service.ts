@@ -12,6 +12,7 @@ export type RouteRequest = {
 export type RouteResponse = {
   geoJson: any;
   distanceKm: number;
+  straightLineDistanceKm: number;
   durationSeconds: number;
 };
 
@@ -32,7 +33,7 @@ export class RouteService {
   getJourneyRoute(id: string) {
     return this.http.get<any>(API_ENDPOINTS.journeyRoute(id)).pipe(
       map((raw) => this.normalize(raw)),
-      catchError(() => of<RouteResponse>({ geoJson: null, distanceKm: 0, durationSeconds: 0 }))
+      catchError(() => of<RouteResponse>({ geoJson: null, distanceKm: 0, straightLineDistanceKm: 0, durationSeconds: 0 }))
     );
   }
 
@@ -42,6 +43,7 @@ export class RouteService {
     const durationSeconds = Number(raw?.durationSeconds ?? raw?.duration_s ?? raw?.duration ?? NaN);
 
     const distanceKm = Number.isFinite(distanceMeters) ? distanceMeters / 1000 : Number(raw?.distanceKm ?? raw?.distance_km ?? 0);
+    const straightLineDistanceKm = Number(raw?.straightLineDistanceKm ?? raw?.straight_line_distance_km ?? 0);
     const duration = Number.isFinite(durationSeconds)
       ? durationSeconds
       : Number(raw?.durationMinutes ?? raw?.duration_min ?? 0) * 60;
@@ -49,8 +51,8 @@ export class RouteService {
     return {
       geoJson,
       distanceKm: Number.isFinite(distanceKm) ? distanceKm : 0,
+      straightLineDistanceKm: Number.isFinite(straightLineDistanceKm) ? straightLineDistanceKm : 0,
       durationSeconds: Number.isFinite(duration) ? duration : 0
     };
   }
 }
-

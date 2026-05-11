@@ -41,6 +41,7 @@ type ScheduleAssignment = {
   destinationLat: number;
   destinationLon: number;
   distanceKm: number;
+  straightLineDistanceKm: number;
   durationSeconds: number;
   geoJson: any;
   startTime: string;
@@ -56,6 +57,7 @@ type WorkerReportRow = {
   workerName: string;
   visits: number;
   distanceKm: number;
+  straightLineDistanceKm: number;
   firstVisit: string;
   lastVisit: string;
 };
@@ -129,6 +131,7 @@ export class App {
   readonly workerImportFile = signal<File | null>(null);
   readonly isWorkerImporting = signal(false);
   readonly mileageFile = signal<File | null>(null);
+  readonly isMileageUploadOpen = signal(false);
   readonly isMileageUploading = signal(false);
   readonly mileageUploadMessage = signal<string | null>(null);
   readonly mileageReports = signal<WorkerMileageReport[]>([]);
@@ -137,11 +140,9 @@ export class App {
   readonly selectedWorkerMileageWorker = signal<CareWorker | null>(null);
   readonly selectedWorkerMileageVisits = signal<WorkerMileageVisit[]>([]);
   readonly isWorkerMileageLoading = signal(false);
-  readonly mileageFilterFromControl = new FormControl('', { nonNullable: true });
-  readonly mileageFilterToControl = new FormControl('', { nonNullable: true });
   readonly mileageFilterStaffControl = new FormControl('', { nonNullable: true });
-  readonly mileageFilterWorkerControl = new FormControl('', { nonNullable: true });
-  readonly mileageFilterLocationControl = new FormControl('', { nonNullable: true });
+  readonly mileageReportMonthControl = new FormControl('', { nonNullable: true });
+  readonly mileageReportYearControl = new FormControl('', { nonNullable: true });
   readonly routeVisitStartControl = new FormControl('13:00', { nonNullable: true });
   readonly routeVisitEndControl = new FormControl('14:00', { nonNullable: true });
   readonly routeVisitsPerDayControl = new FormControl(1, { nonNullable: true });
@@ -196,11 +197,9 @@ export class App {
   private readonly reportToDate = signal(this.formatDateInput(this.today));
   private readonly reportWorkerId = signal('all');
   private readonly reportSearch = signal('');
-  private readonly mileageFilterFrom = signal('');
-  private readonly mileageFilterTo = signal('');
   private readonly mileageFilterStaff = signal('');
-  private readonly mileageFilterWorker = signal('');
-  private readonly mileageFilterLocation = signal('');
+  private readonly mileageReportMonth = signal('');
+  private readonly mileageReportYear = signal('');
   private readonly messageDurationMs = 10000;
   private readonly messageTimers = new Map<WritableSignal<string | null>, ReturnType<typeof setTimeout>>();
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -289,12 +288,14 @@ export class App {
           workerName,
           visits: 0,
           distanceKm: 0,
+          straightLineDistanceKm: 0,
           firstVisit: visit.startTime,
           lastVisit: visit.endTime
         };
 
         row.visits += 1;
         row.distanceKm += visit.distanceKm;
+        row.straightLineDistanceKm += visit.straightLineDistanceKm;
         if (visit.startTime < row.firstVisit) row.firstVisit = visit.startTime;
         if (visit.endTime > row.lastVisit) row.lastVisit = visit.endTime;
         rows.set(workerId, row);
@@ -314,6 +315,11 @@ export class App {
 
   readonly distanceText = computed(() => {
     const distanceKm = this.route()?.distanceKm;
+    return typeof distanceKm === 'number' && distanceKm > 0 ? `${distanceKm.toFixed(2)} km` : '-';
+  });
+
+  readonly straightLineDistanceText = computed(() => {
+    const distanceKm = this.route()?.straightLineDistanceKm;
     return typeof distanceKm === 'number' && distanceKm > 0 ? `${distanceKm.toFixed(2)} km` : '-';
   });
 
@@ -390,6 +396,13 @@ export class App {
     )
   );
 
+  readonly selectedStraightLineMileageTotal = computed(() =>
+    this.filteredSelectedMileageRows().reduce(
+      (total, row) => total + Number(row.totalStraightLineMileage ?? 0),
+      0
+    )
+  );
+
   constructor() {
     const originControl = this.form.controls.origin;
     const destinationControl = this.form.controls.destination;
@@ -440,24 +453,18 @@ export class App {
     this.reportSearchControl.valueChanges.subscribe((v) => {
       this.reportSearch.set(v);
     });
-    this.mileageFilterFromControl.valueChanges.subscribe((v) => {
-      this.mileageFilterFrom.set(v);
-    });
-
-    this.mileageFilterToControl.valueChanges.subscribe((v) => {
-      this.mileageFilterTo.set(v);
-    });
-
     this.mileageFilterStaffControl.valueChanges.subscribe((v) => {
       this.mileageFilterStaff.set(v);
     });
 
-    this.mileageFilterWorkerControl.valueChanges.subscribe((v) => {
-      this.mileageFilterWorker.set(v);
+    this.mileageReportMonthControl.valueChanges.subscribe((v) => {
+      this.mileageReportMonth.set(v);
+      this.refreshMileageReports();
     });
 
-    this.mileageFilterLocationControl.valueChanges.subscribe((v) => {
-      this.mileageFilterLocation.set(v);
+    this.mileageReportYearControl.valueChanges.subscribe((v) => {
+      this.mileageReportYear.set(v);
+      this.refreshMileageReports();
     });
 
     this.workerHomeAddressControl.valueChanges
@@ -548,26 +555,30 @@ export class App {
   }
 
   private refreshMileageReports(selectedReportId?: string | number) {
-    this.mileageUploadApi.listReports().subscribe({
-      next: (reports) => {
-        const rows = reports ?? [];
-        this.mileageReports.set(rows);
+    this.mileageUploadApi
+      .listReports({
+        month: this.mileageReportMonth(),
+        year: this.mileageReportYear()
+      })
+      .subscribe({
+        next: (reports) => {
+          const rows = reports ?? [];
+          this.mileageReports.set(rows);
 
-        const selected =
-          rows.find((report) => String(report.id) === String(selectedReportId)) ??
-          this.selectedMileageReport() ??
-          rows[0] ??
-          null;
-        this.selectedMileageReport.set(
-          selected ? rows.find((report) => String(report.id) === String(selected.id)) ?? selected : null
-        );
-      },
-      error: () => {
-        this.showError(this.mileageUploadMessage, 'Could not load mileage reports from the backend.');
-        this.mileageReports.set([]);
-        this.selectedMileageReport.set(null);
-      }
-    });
+          const current = this.selectedMileageReport();
+          const selected =
+            rows.find((report) => String(report.id) === String(selectedReportId)) ??
+            (current ? rows.find((report) => String(report.id) === String(current.id)) : null) ??
+            rows[0] ??
+            null;
+          this.selectedMileageReport.set(selected);
+        },
+        error: () => {
+          this.showError(this.mileageUploadMessage, 'Could not load mileage reports from the backend.');
+          this.mileageReports.set([]);
+          this.selectedMileageReport.set(null);
+        }
+      });
   }
 
   private refreshWorkers() {
@@ -750,6 +761,7 @@ export class App {
             ? {
                 ...pending,
                 distanceKm: response.distanceKm,
+                straightLineDistanceKm: response.straightLineDistanceKm,
                 durationSeconds: response.durationSeconds,
                 geoJson: response.geoJson
               }
@@ -808,6 +820,7 @@ export class App {
       destinationLat: destination.lat,
       destinationLon: destination.lon,
       distanceKm: route.distanceKm,
+      straightLineDistanceKm: route.straightLineDistanceKm,
       durationSeconds: route.durationSeconds,
       geoJson: route.geoJson,
       startTime: this.routeVisitStartControl.value,
@@ -1024,6 +1037,18 @@ export class App {
     this.mileageUploadMessage.set(null);
   }
 
+  openMileageUpload() {
+    this.isMileageUploadOpen.set(true);
+    this.mileageUploadMessage.set(null);
+  }
+
+  closeMileageUpload() {
+    if (this.isMileageUploading()) return;
+    this.isMileageUploadOpen.set(false);
+    this.mileageFile.set(null);
+    this.mileageUploadMessage.set(null);
+  }
+
   async uploadWorkerMileage() {
     const file = this.mileageFile();
     if (!file) {
@@ -1035,10 +1060,16 @@ export class App {
     this.mileageUploadMessage.set('Calculating mileage from the uploaded worksheet...');
 
     try {
-      const report = await this.mileageUploadApi.upload(file);
+      const reports = await this.mileageUploadApi.upload(file, {
+        month: this.mileageReportMonth(),
+        year: this.mileageReportYear()
+      });
+      const report = this.preferredMileageReport(reports);
       this.selectedMileageReport.set(report);
-      this.refreshMileageReports(report.id);
-      this.showSuccess(this.mileageUploadMessage, 'Mileage report calculated. You can preview it below or download the workbook.');
+      this.refreshMileageReports(report?.id);
+      this.isMileageUploadOpen.set(false);
+      this.mileageFile.set(null);
+      this.showSuccess(this.mileageUploadMessage, this.mileageUploadSuccessMessage(reports));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to calculate mileage.';
       this.showError(this.mileageUploadMessage, message);
@@ -1171,6 +1202,7 @@ export class App {
       const visit = {
         ...pending,
         distanceKm: route.distanceKm,
+        straightLineDistanceKm: route.straightLineDistanceKm,
         durationSeconds: route.durationSeconds,
         geoJson: route.geoJson
       };
@@ -1193,6 +1225,7 @@ export class App {
         destinationLat: Number(saved.destinationLat ?? saved.destination?.lat ?? 0),
         destinationLon: Number(saved.destinationLon ?? saved.destination?.lon ?? 0),
         distanceKm: visit.distanceKm,
+        straightLineDistanceKm: Number(saved.straightLineDistanceKm ?? visit.straightLineDistanceKm ?? 0),
         durationSeconds: visit.durationSeconds,
         geoJson: visit.geoJson,
         startTime: visit.startTime,
@@ -1244,6 +1277,7 @@ export class App {
       destinationLat: destination.lat,
       destinationLon: destination.lon,
       distanceKm: response.distanceKm,
+      straightLineDistanceKm: response.straightLineDistanceKm,
       durationSeconds: response.durationSeconds,
       geoJson: response.geoJson,
       startTime,
@@ -1277,6 +1311,7 @@ export class App {
       destinationLat: destination.lat,
       destinationLon: destination.lon,
       distanceKm: 0,
+      straightLineDistanceKm: 0,
       durationSeconds: 0,
       geoJson: null,
       startTime,
@@ -1387,6 +1422,7 @@ export class App {
       item.geoJson
         ? {
             distanceKm: item.distanceKm,
+            straightLineDistanceKm: item.straightLineDistanceKm,
             durationSeconds: item.durationSeconds,
             geoJson: item.geoJson
           }
@@ -1438,30 +1474,33 @@ export class App {
   }
 
   private visitMatchesMileageFilters(visit: WorkerMileageVisit): boolean {
-    const from = this.mileageFilterFrom();
-    const to = this.mileageFilterTo();
     const staff = this.mileageFilterStaff().trim().toLowerCase();
-    const worker = this.mileageFilterWorker().trim().toLowerCase();
-    const location = this.mileageFilterLocation().trim().toLowerCase();
-    const visitTime = new Date(`${visit.visitDate}T00:00:00`).getTime();
 
-    if (from && visitTime < this.dateOnlyTime(from, false)) return false;
-    if (to && visitTime > this.dateOnlyTime(to, true)) return false;
     if (staff && !visit.staffNumber.toLowerCase().includes(staff)) return false;
-    if (location && !visit.address.toLowerCase().includes(location)) return false;
-    if (worker) {
-      const workerName = this.workerNameByStaffNumber(visit.staffNumber).toLowerCase();
-      if (!workerName.includes(worker)) return false;
-    }
     return true;
   }
 
   private staffMatchesMileageFilters(staffNumber: string): boolean {
     const staff = this.mileageFilterStaff().trim().toLowerCase();
-    const worker = this.mileageFilterWorker().trim().toLowerCase();
     if (staff && !staffNumber.toLowerCase().includes(staff)) return false;
-    if (worker && !this.workerNameByStaffNumber(staffNumber).toLowerCase().includes(worker)) return false;
     return true;
+  }
+
+  private preferredMileageReport(reports: WorkerMileageReport[]): WorkerMileageReport | null {
+    return [...(reports ?? [])].sort((a, b) =>
+      String(b.reportMonth ?? '').localeCompare(String(a.reportMonth ?? ''))
+    )[0] ?? null;
+  }
+
+  private mileageUploadSuccessMessage(reports: WorkerMileageReport[]): string {
+    const count = reports?.length ?? 0;
+    if (count === 0) return 'No mileage reports were created from this worksheet.';
+    if (count === 1) {
+      return `Mileage report calculated for ${reports[0].reportMonth}. You can preview it below or download the workbook.`;
+    }
+
+    const months = reports.map((report) => report.reportMonth).filter(Boolean).join(', ');
+    return `${count} monthly mileage reports calculated${months ? `: ${months}` : ''}. Select a report below to preview or download it.`;
   }
   formatVisitTimeRange(visit: WorkerMileageVisit): string {
     if (visit.startTime && visit.endTime) return `${visit.startTime} - ${visit.endTime}`;
@@ -1565,6 +1604,7 @@ export class App {
       destinationLat: Number(row.destinationLat ?? row.destination?.lat ?? 0),
       destinationLon: Number(row.destinationLon ?? row.destination?.lon ?? 0),
       distanceKm: Number(row.distanceKm ?? 0),
+      straightLineDistanceKm: Number(row.straightLineDistanceKm ?? 0),
       durationSeconds: Number(row.durationSeconds ?? 0),
       geoJson: row.geoJson ?? null,
       startTime: String(row.startTime ?? '13:00'),
