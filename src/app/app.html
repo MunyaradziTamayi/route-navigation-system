@@ -1,4 +1,4 @@
-<div class="care-app" [class.is-nav-collapsed]="isSidebarCollapsed()">
+﻿<div class="care-app" [class.is-nav-collapsed]="isSidebarCollapsed()">
   <div
     class="app-notice"
     *ngIf="notice() as currentNotice"
@@ -127,7 +127,7 @@
       <header class="dashboard__header">
         <div>
           <h1>Dashboard</h1>
-          <p>Overview - {{ today | date: 'EEEE, d MMMM y' }}</p>
+          <p>Operational overview - {{ today | date: 'EEEE, d MMMM y' }}</p>
         </div>
       </header>
 
@@ -138,14 +138,19 @@
           <div class="stat-card__meta">registered</div>
         </article>
         <article class="stat-card">
-          <div class="stat-card__label">Today's visits</div>
-          <div class="stat-card__value">{{ todaySchedules().length }}</div>
-          <div class="stat-card__meta">{{ todaySchedules().filter(s => s.status === 'pending').length }} pending, {{ todaySchedules().filter(s => s.status === 'completed').length }} completed</div>
-        </article>
-        <article class="stat-card">
           <div class="stat-card__label">Schedules</div>
           <div class="stat-card__value">{{ schedules().length }}</div>
-          <div class="stat-card__meta">total days planned</div>
+          <div class="stat-card__meta">saved visit plans</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Uploaded workers</div>
+          <div class="stat-card__value">{{ uploadedMileageWorkerCount() }}</div>
+          <div class="stat-card__meta">from worker mileage uploads</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Uploaded mileage</div>
+          <div class="stat-card__value">{{ uploadedMileageTotal().toFixed(2) }}</div>
+          <div class="stat-card__meta">total miles across uploads</div>
         </article>
         <article class="stat-card">
           <div class="stat-card__label">Status</div>
@@ -154,43 +159,53 @@
       </div>
 
       <div class="dashboard-grid">
-        <section class="dashboard-card dashboard-card--empty">
-          <h2>Today's schedules</h2>
-          <p *ngIf="todaySchedules().length === 0">No schedules for today. Head to <button type="button" (click)="setActivePage('route')">Route</button> to calculate and assign a route.</p>
-          <div class="schedule-list schedule-list--compact" *ngIf="todaySchedules().length > 0">
-            <article class="schedule-item" *ngFor="let item of todaySchedules()">
-              <div>
-                <h3>{{ workerNamesLabel(item.workerNames) }}</h3>
-                <p>{{ item.destinationLabel }}</p>
-                <span>{{ item.startTime }} - {{ item.endTime }} - {{ item.visitsPerDay }} visit{{ item.visitsPerDay === 1 ? '' : 's' }}/day</span>
-              </div>
-              <strong>{{ item.distanceKm.toFixed(2) }} km</strong>
-            </article>
+        <section class="dashboard-card dashboard-card--actions">
+          <div>
+            <h2>Quick actions</h2>
+            <p>Start the most common mileage and routing tasks from one place.</p>
+          </div>
+          <div class="dashboard-action-list">
+            <button type="button" (click)="setActivePage('workers')">
+              <span>Workers</span>
+              <strong>Manage staff records and import workers</strong>
+            </button>
+            <button type="button" (click)="setActivePage('worker-mileage')">
+              <span>Worker mileage</span>
+              <strong>Upload monthly worksheets and review mileage output</strong>
+            </button>
+            <button type="button" (click)="setActivePage('route')">
+              <span>Routes &amp; Visits</span>
+              <strong>Optimise routes and assign visits</strong>
+            </button>
+            <button type="button" (click)="setActivePage('reports')">
+              <span>Reports</span>
+              <strong>Review mileage summaries across workers</strong>
+            </button>
           </div>
         </section>
 
-        <section class="dashboard-card">
-          <h2>Quick start guide</h2>
+        <section class="dashboard-card dashboard-card--workflow">
+          <h2>Recommended workflow</h2>
           <div class="guide-list">
             <div class="guide-item">
               <div class="guide-item__number">1</div>
               <div>
-                <h3>Add workers</h3>
-                <p>Go to Workers -> Add your care workers with their home address</p>
+                <h3>Prepare workers</h3>
+                <p>Add staff manually or import an Excel worker list with staff numbers.</p>
               </div>
             </div>
             <div class="guide-item">
               <div class="guide-item__number">2</div>
               <div>
-                <h3>Build a schedule</h3>
-                <p>Go to Routes & Visits -> Create Visits ,Optimise Route to get shortest distance and Assign Workers </p>
+                <h3>Upload mileage data</h3>
+                <p>Use Worker Mileage to calculate monthly totals and inspect the generated report.</p>
               </div>
             </div>
             <div class="guide-item">
               <div class="guide-item__number">3</div>
               <div>
-                <h3>Optimise route</h3>
-                <p>Click "Optimise route" to get the shortest route with mileage</p>
+                <h3>Plan routes</h3>
+                <p>Optimise routes, assign workers, and keep saved visit records ready for reports.</p>
               </div>
             </div>
           </div>
@@ -210,6 +225,24 @@
         </button>
       </header>
 
+
+      <section class="worker-import-card">
+        <div>
+          <h2>Import workers</h2>
+          <p>Upload an Excel file with Staff Number and Name columns.</p>
+        </div>
+        <div class="field">
+          <label for="workerImportFile">Worker Excel file</label>
+          <input id="workerImportFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onWorkerImportFileSelected($event)">
+        </div>
+        <div class="mileage-upload-card__selected" *ngIf="workerImportFile() as file">
+          <span>{{ file.name }}</span>
+          <small>{{ (file.size / 1024).toFixed(1) }} KB</small>
+        </div>
+        <button class="workers-add app-primary-action" type="button" [disabled]="!workerImportFile() || isWorkerImporting()" (click)="uploadWorkersExcel()">
+          {{ isWorkerImporting() ? 'Importing...' : 'Import workers' }}
+        </button>
+      </section>
       <section class="worker-form" *ngIf="isWorkerFormOpen()">
         <div class="worker-form__title">{{ editingWorkerId() ? 'Edit worker' : 'Add worker' }}</div>
         <div class="worker-form__grid">
@@ -360,7 +393,7 @@
 
         <div class="visit-form__actions">
           <button
-            class="workers-add mileage-upload-card__calculate"
+            class="workers-add app-primary-action"
             type="button"
             [disabled]="!mileageFile() || isMileageUploading()"
             (click)="uploadWorkerMileage()"
@@ -374,11 +407,34 @@
         </div>
       </section>
 
+
+      <section class="mileage-report-filters">
+        <div class="field">
+          <label for="mileageFrom">From date</label>
+          <input id="mileageFrom" type="date" [formControl]="mileageFilterFromControl">
+        </div>
+        <div class="field">
+          <label for="mileageTo">To date</label>
+          <input id="mileageTo" type="date" [formControl]="mileageFilterToControl">
+        </div>
+        <div class="field">
+          <label for="mileageWorkerName">Worker name</label>
+          <input id="mileageWorkerName" type="search" [formControl]="mileageFilterWorkerControl" placeholder="Search worker name">
+        </div>
+        <div class="field">
+          <label for="mileageStaffNumber">Staff number</label>
+          <input id="mileageStaffNumber" type="search" [formControl]="mileageFilterStaffControl" placeholder="Search staff number">
+        </div>
+        <div class="field mileage-report-filters__location">
+          <label for="mileageLocation">Excel location</label>
+          <input id="mileageLocation" type="search" [formControl]="mileageFilterLocationControl" placeholder="Search address from uploaded Excel">
+        </div>
+      </section>
       <section class="mileage-result" *ngIf="selectedMileageReport() as report">
         <div class="mileage-result__header">
           <div>
             <h2>{{ report.fileName || 'Mileage report' }}</h2>
-            <p>{{ report.reportMonth }} - {{ report.rows.length }} staff member{{ report.rows.length === 1 ? '' : 's' }} - {{ report.createdAt | date: 'medium' }}</p>
+            <p>{{ report.reportMonth }} - {{ filteredSelectedMileageRows().length }} staff member{{ filteredSelectedMileageRows().length === 1 ? '' : 's' }} - {{ report.createdAt | date: 'medium' }}</p>
           </div>
           <button
             class="mileage-result__download"
@@ -394,7 +450,7 @@
         <div class="mileage-summary">
           <article class="stat-card">
             <div class="stat-card__label">Staff</div>
-            <div class="stat-card__value">{{ report.rows.length }}</div>
+            <div class="stat-card__value">{{ filteredSelectedMileageRows().length }}</div>
             <div class="stat-card__meta">in this report</div>
           </article>
           <article class="stat-card">
@@ -404,30 +460,30 @@
           </article>
         </div>
 
-        <div class="mileage-table" *ngIf="report.rows.length > 0">
+        <div class="mileage-table" *ngIf="filteredSelectedMileageRows().length > 0">
           <div class="mileage-table__head">
             <div>Staff number</div>
             <div>Total mileage</div>
           </div>
-          <div class="mileage-table__row" *ngFor="let row of report.rows">
+          <div class="mileage-table__row" *ngFor="let row of filteredSelectedMileageRows()">
             <div>{{ row.staffNumber }}</div>
             <div>{{ formatMileageValue(row.totalMileage) }}</div>
           </div>
         </div>
 
-        <div class="empty-state empty-state--compact" *ngIf="report.rows.length === 0">
+        <div class="empty-state empty-state--compact" *ngIf="filteredSelectedMileageRows().length === 0">
           This report does not have mileage rows yet.
         </div>
 
-        <div class="uploaded-visits-table uploaded-visits-table--report" *ngIf="(report.visits ?? []).length > 0">
+        <div class="uploaded-visits-table uploaded-visits-table--report" *ngIf="filteredSelectedMileageVisits().length > 0">
           <div class="uploaded-visits-table__head">
             <div>Staff number</div>
             <div>Date</div>
             <div>Visit time</div>
             <div>Address</div>
           </div>
-          <div class="uploaded-visits-table__row" *ngFor="let visit of report.visits ?? []">
-            <div>{{ visit.staffNumber }}</div>
+          <div class="uploaded-visits-table__row" *ngFor="let visit of filteredSelectedMileageVisits()">
+            <div>{{ visit.staffNumber }}<br><small>{{ workerNameByStaffNumber(visit.staffNumber) || 'Unknown worker' }}</small></div>
             <div>{{ visit.visitDate | date: 'mediumDate' }}</div>
             <div>{{ formatVisitTimeRange(visit) }}</div>
             <div>{{ visit.address }}</div>
@@ -435,13 +491,13 @@
         </div>
       </section>
 
-      <section class="mileage-history" *ngIf="mileageReports().length > 0">
+      <section class="mileage-history" *ngIf="filteredMileageReports().length > 0">
         <h2>Previous reports</h2>
         <div class="mileage-history__list">
           <button
             class="mileage-history__item"
             type="button"
-            *ngFor="let report of mileageReports()"
+            *ngFor="let report of filteredMileageReports()"
             [class.is-selected]="selectedMileageReport()?.id === report.id"
             (click)="viewMileageReport(report)"
           >
@@ -774,7 +830,7 @@
                   [disabled]="!settingsStartSelected()"
                   style="padding: 8px 12px; white-space: nowrap;"
                 >
-                  ðŸ“ Use Settings
+                  Use Settings
                 </button>
               </div>
               <div class="suggestions" *ngIf="originSuggestions().length > 0">
@@ -789,13 +845,13 @@
               </div>
               <div style="font-size: 12px; color: #666; margin-top: 6px;" *ngIf="originSelected() || useSettingsOrigin()">
                 <span *ngIf="originSelected() && !useSettingsOrigin()">
-                  âœ“ Origin: <strong>{{ originSelected()?.displayName }}</strong>
+                  Origin: <strong>{{ originSelected()?.displayName }}</strong>
                   <button type="button" class="link-btn" (click)="clearOriginAndUseManual()" style="margin-left: 8px; color: #0066cc; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0; font-size: 12px;">
                     Change
                   </button>
                 </span>
                 <span *ngIf="useSettingsOrigin()">
-                  âœ“ Using settings origin: <strong>{{ settingsStartSelected()?.displayName }}</strong>
+                  Origin: <strong>{{ settingsStartSelected()?.displayName }}</strong>
                   <button type="button" class="link-btn" (click)="clearOriginAndUseManual()" style="margin-left: 8px; color: #0066cc; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0; font-size: 12px;">
                     Enter manual origin
                   </button>
@@ -981,4 +1037,3 @@
     </section>
   </main>
 </div>
-

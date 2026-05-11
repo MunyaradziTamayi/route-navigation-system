@@ -272,7 +272,11 @@ body {
 }
 
 .dashboard__header {
-  margin-bottom: 30px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 26px;
 }
 
 .dashboard h1,
@@ -292,7 +296,7 @@ body {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
 }
@@ -308,6 +312,16 @@ body {
 .stat-card {
   min-height: 106px;
   padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #15557f;
 }
 
 .stat-card__label {
@@ -338,35 +352,67 @@ body {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 1fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
   gap: 16px;
 }
 
 .dashboard-card {
-  min-height: 270px;
+  min-height: 300px;
   padding: 22px 20px 20px;
 }
 
 .dashboard-card h2 {
-  margin: 0 0 18px;
+  margin: 0 0 12px;
   color: #061a32;
   font-size: 16px;
 }
 
-.dashboard-card--empty p {
+.dashboard-card--actions > div:first-child p {
   margin: 0;
   color: #6b7d99;
   font-size: 13px;
 }
 
-.dashboard-card--empty button {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: #5f779d;
+.dashboard-action-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.dashboard-action-list button {
+  min-height: 96px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border: 1px solid #d2deea;
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fbfe;
+  color: #263852;
   font: inherit;
-  font-weight: 800;
+  text-align: left;
   cursor: pointer;
+}
+
+.dashboard-action-list button:hover {
+  border-color: #9fb6ca;
+  background: #eef7fc;
+  transform: translateY(-1px);
+}
+
+.dashboard-action-list span {
+  color: #15557f;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+.dashboard-action-list strong {
+  color: #061a32;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .guide-list {
@@ -451,6 +497,16 @@ body {
 
 .workers-add:hover {
   background: #0f466d;
+}
+
+.app-primary-action {
+  border: 1px solid rgba(47, 208, 255, 0.26);
+  background: #111827;
+  color: #f8fbff;
+}
+
+.app-primary-action:hover:not(:disabled) {
+  background: #172033;
 }
 
 .workers-add:disabled {
@@ -1136,15 +1192,6 @@ body {
   color: #6b7d99;
 }
 
-.mileage-upload-card__calculate {
-  background: #124e68;
-  box-shadow: 0 6px 16px rgba(18, 78, 104, 0.18);
-}
-
-.mileage-upload-card__calculate:hover:not(:disabled) {
-  background: #0d4058;
-}
-
 .mileage-result,
 .mileage-history {
   max-width: 940px;
@@ -1634,6 +1681,15 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .dashboard__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-action-list {
+    grid-template-columns: 1fr;
+  }
+
   .route-view {
     height: auto;
     overflow: visible;
@@ -1724,5 +1780,52 @@ body {
   .uploaded-visits-table--report .uploaded-visits-table__head,
   .uploaded-visits-table--report .uploaded-visits-table__row {
     min-width: 760px;
+  }
+}
+
+.worker-import-card,
+.mileage-report-filters {
+  max-width: 940px;
+  border: 1px solid #cfdbe8;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.worker-import-card h2 {
+  margin: 0;
+  color: #071d34;
+  font-size: 18px;
+}
+
+.worker-import-card p {
+  margin: 6px 0 14px;
+  color: #6b7d99;
+  font-size: 13px;
+}
+
+.mileage-report-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.mileage-report-filters .field {
+  margin: 0;
+}
+
+.mileage-report-filters__location {
+  grid-column: 1 / -1;
+}
+
+.uploaded-visits-table small {
+  color: #6b7d99;
+}
+
+@media (max-width: 860px) {
+  .mileage-report-filters {
+    grid-template-columns: 1fr;
   }
 }

@@ -126,6 +126,8 @@ export class App {
   readonly isWorkerFormOpen = signal(false);
   readonly editingWorkerId = signal<string | null>(null);
   readonly workerFormMessage = signal<string | null>(null);
+  readonly workerImportFile = signal<File | null>(null);
+  readonly isWorkerImporting = signal(false);
   readonly mileageFile = signal<File | null>(null);
   readonly isMileageUploading = signal(false);
   readonly mileageUploadMessage = signal<string | null>(null);
@@ -135,6 +137,11 @@ export class App {
   readonly selectedWorkerMileageWorker = signal<CareWorker | null>(null);
   readonly selectedWorkerMileageVisits = signal<WorkerMileageVisit[]>([]);
   readonly isWorkerMileageLoading = signal(false);
+  readonly mileageFilterFromControl = new FormControl('', { nonNullable: true });
+  readonly mileageFilterToControl = new FormControl('', { nonNullable: true });
+  readonly mileageFilterStaffControl = new FormControl('', { nonNullable: true });
+  readonly mileageFilterWorkerControl = new FormControl('', { nonNullable: true });
+  readonly mileageFilterLocationControl = new FormControl('', { nonNullable: true });
   readonly routeVisitStartControl = new FormControl('13:00', { nonNullable: true });
   readonly routeVisitEndControl = new FormControl('14:00', { nonNullable: true });
   readonly routeVisitsPerDayControl = new FormControl(1, { nonNullable: true });
@@ -189,6 +196,11 @@ export class App {
   private readonly reportToDate = signal(this.formatDateInput(this.today));
   private readonly reportWorkerId = signal('all');
   private readonly reportSearch = signal('');
+  private readonly mileageFilterFrom = signal('');
+  private readonly mileageFilterTo = signal('');
+  private readonly mileageFilterStaff = signal('');
+  private readonly mileageFilterWorker = signal('');
+  private readonly mileageFilterLocation = signal('');
   private readonly messageDurationMs = 10000;
   private readonly messageTimers = new Map<WritableSignal<string | null>, ReturnType<typeof setTimeout>>();
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -302,12 +314,12 @@ export class App {
 
   readonly distanceText = computed(() => {
     const distanceKm = this.route()?.distanceKm;
-    return typeof distanceKm === 'number' && distanceKm > 0 ? `${distanceKm.toFixed(2)} km` : 'â€”';
+    return typeof distanceKm === 'number' && distanceKm > 0 ? `${distanceKm.toFixed(2)} km` : '-';
   });
 
   readonly durationText = computed(() => {
     const durationSeconds = this.route()?.durationSeconds;
-    if (typeof durationSeconds !== 'number' || durationSeconds <= 0) return 'â€”';
+    if (typeof durationSeconds !== 'number' || durationSeconds <= 0) return '-';
     const minutes = Math.round(durationSeconds / 60);
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
@@ -317,29 +329,62 @@ export class App {
 
   readonly oneTripText = computed(() => {
     const distanceKm = this.route()?.distanceKm;
-    if (typeof distanceKm !== 'number' || distanceKm <= 0) return 'â€”';
+    if (typeof distanceKm !== 'number' || distanceKm <= 0) return '-';
 
     return this.formatDistance(distanceKm);
   });
 
   readonly roundTripText = computed(() => {
     const distanceKm = this.route()?.distanceKm;
-    if (typeof distanceKm !== 'number' || distanceKm <= 0) return 'â€”';
+    if (typeof distanceKm !== 'number' || distanceKm <= 0) return '-';
 
     return this.formatDistance(distanceKm * 2);
   });
 
   readonly totalDistanceText = computed(() => {
     const distanceKm = this.route()?.distanceKm;
-    if (typeof distanceKm !== 'number' || distanceKm <= 0) return 'â€”';
+    if (typeof distanceKm !== 'number' || distanceKm <= 0) return '-';
 
     const trips = Math.max(1, Math.floor(Number(this.trips()) || 1));
     const multiplier = this.roundTrip() ? 2 : 1;
     return this.formatDistance(distanceKm * trips * multiplier);
   });
 
+
+  readonly filteredMileageReports = computed(() =>
+    this.mileageReports().filter((report) => this.reportMatchesMileageFilters(report))
+  );
+
+  readonly filteredSelectedMileageVisits = computed(() =>
+    (this.selectedMileageReport()?.visits ?? []).filter((visit) => this.visitMatchesMileageFilters(visit))
+  );
+
+  readonly filteredSelectedMileageRows = computed(() => {
+    const report = this.selectedMileageReport();
+    if (!report) return [];
+    const visibleStaff = new Set(this.filteredSelectedMileageVisits().map((visit) => visit.staffNumber));
+    if ((report.visits ?? []).length === 0) return report.rows ?? [];
+    return (report.rows ?? []).filter((row) => visibleStaff.has(row.staffNumber));
+  });
+
+  readonly uploadedMileageWorkerCount = computed(() => {
+    const staff = new Set<string>();
+    for (const report of this.mileageReports()) {
+      for (const row of report.rows ?? []) staff.add(row.staffNumber);
+    }
+    return staff.size;
+  });
+
+  readonly uploadedMileageTotal = computed(() =>
+    this.mileageReports().reduce(
+      (total, report) =>
+        total + (report.rows ?? []).reduce((sum, row) => sum + Number(row.totalMileage ?? 0), 0),
+      0
+    )
+  );
+
   readonly selectedMileageTotal = computed(() =>
-    (this.selectedMileageReport()?.rows ?? []).reduce(
+    this.filteredSelectedMileageRows().reduce(
       (total, row) => total + Number(row.totalMileage ?? 0),
       0
     )
@@ -394,6 +439,25 @@ export class App {
 
     this.reportSearchControl.valueChanges.subscribe((v) => {
       this.reportSearch.set(v);
+    });
+    this.mileageFilterFromControl.valueChanges.subscribe((v) => {
+      this.mileageFilterFrom.set(v);
+    });
+
+    this.mileageFilterToControl.valueChanges.subscribe((v) => {
+      this.mileageFilterTo.set(v);
+    });
+
+    this.mileageFilterStaffControl.valueChanges.subscribe((v) => {
+      this.mileageFilterStaff.set(v);
+    });
+
+    this.mileageFilterWorkerControl.valueChanges.subscribe((v) => {
+      this.mileageFilterWorker.set(v);
+    });
+
+    this.mileageFilterLocationControl.valueChanges.subscribe((v) => {
+      this.mileageFilterLocation.set(v);
     });
 
     this.workerHomeAddressControl.valueChanges
@@ -818,6 +882,32 @@ export class App {
     this.showSuccess(this.settingsMessage, 'Starting address saved.');
   }
 
+
+  onWorkerImportFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.workerImportFile.set(input.files?.[0] ?? null);
+    this.workerFormMessage.set(null);
+  }
+
+  async uploadWorkersExcel() {
+    const file = this.workerImportFile();
+    if (!file) {
+      this.showError(this.workerFormMessage, 'Choose an Excel file with Staff Number and Name columns.');
+      return;
+    }
+
+    this.isWorkerImporting.set(true);
+    try {
+      const imported = await this.workersApi.uploadWorkers(file);
+      this.workerImportFile.set(null);
+      this.refreshWorkers();
+      this.showSuccess(this.workerFormMessage, `${imported.length} worker${imported.length === 1 ? '' : 's'} imported.`);
+    } catch {
+      this.showError(this.workerFormMessage, 'Failed to import workers from Excel.');
+    } finally {
+      this.isWorkerImporting.set(false);
+    }
+  }
   openWorkerForm() {
     this.resetWorkerForm();
     this.isWorkerFormOpen.set(true);
@@ -1334,6 +1424,45 @@ export class App {
     return Number(value ?? 0).toFixed(2);
   }
 
+
+  workerNameByStaffNumber(staffNumber: string): string {
+    return this.workers().find((worker) => worker.staffNumber === staffNumber)?.name ?? '';
+  }
+
+  private reportMatchesMileageFilters(report: WorkerMileageReport): boolean {
+    const visits = report.visits ?? [];
+    if (visits.length === 0) {
+      return (report.rows ?? []).some((row) => this.staffMatchesMileageFilters(row.staffNumber));
+    }
+    return visits.some((visit) => this.visitMatchesMileageFilters(visit));
+  }
+
+  private visitMatchesMileageFilters(visit: WorkerMileageVisit): boolean {
+    const from = this.mileageFilterFrom();
+    const to = this.mileageFilterTo();
+    const staff = this.mileageFilterStaff().trim().toLowerCase();
+    const worker = this.mileageFilterWorker().trim().toLowerCase();
+    const location = this.mileageFilterLocation().trim().toLowerCase();
+    const visitTime = new Date(`${visit.visitDate}T00:00:00`).getTime();
+
+    if (from && visitTime < this.dateOnlyTime(from, false)) return false;
+    if (to && visitTime > this.dateOnlyTime(to, true)) return false;
+    if (staff && !visit.staffNumber.toLowerCase().includes(staff)) return false;
+    if (location && !visit.address.toLowerCase().includes(location)) return false;
+    if (worker) {
+      const workerName = this.workerNameByStaffNumber(visit.staffNumber).toLowerCase();
+      if (!workerName.includes(worker)) return false;
+    }
+    return true;
+  }
+
+  private staffMatchesMileageFilters(staffNumber: string): boolean {
+    const staff = this.mileageFilterStaff().trim().toLowerCase();
+    const worker = this.mileageFilterWorker().trim().toLowerCase();
+    if (staff && !staffNumber.toLowerCase().includes(staff)) return false;
+    if (worker && !this.workerNameByStaffNumber(staffNumber).toLowerCase().includes(worker)) return false;
+    return true;
+  }
   formatVisitTimeRange(visit: WorkerMileageVisit): string {
     if (visit.startTime && visit.endTime) return `${visit.startTime} - ${visit.endTime}`;
     return visit.startTime || visit.endTime || 'Not set';
@@ -1551,5 +1680,7 @@ export class App {
     return date.getTime();
   }
 }
+
+
 
 

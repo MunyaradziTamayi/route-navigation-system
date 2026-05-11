@@ -23,7 +23,10 @@ export const API_ENDPOINTS = {
   mileageReportDownload: (id: string | number) => `${getApiBaseUrl()}/api/mileage/reports/${encodeURIComponent(String(id))}/download`,
   workerMileageVisits: (staffNumber: string) => `${getApiBaseUrl()}/api/mileage/visits/staff/${encodeURIComponent(staffNumber)}`,
   workers: () => `${getApiBaseUrl()}/api/workers`,
+  workerUpload: () => `${getApiBaseUrl()}/api/workers/upload`,
   worker: (id: string | number) => `${getApiBaseUrl()}/api/workers/${encodeURIComponent(String(id))}`
 };
+
+
 
 

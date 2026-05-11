@@ -37,5 +37,12 @@ export class WorkerService {
   delete(id: string | number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(API_ENDPOINTS.worker(id)));
   }
+
+  uploadWorkers(file: File): Promise<WorkerResponse[]> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    return firstValueFrom(this.http.post<WorkerResponse[]>(API_ENDPOINTS.workerUpload(), body));
+  }
 }
+
 
