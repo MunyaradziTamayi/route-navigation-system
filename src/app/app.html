@@ -77,6 +77,17 @@
       <button
         class="care-nav__item"
         type="button"
+        [class.is-active]="activePage() === 'worker-mileage'"
+        (click)="setActivePage('worker-mileage')"
+      >
+        <span class="care-nav__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-3 3 2 5-6"/><path d="M16 8h3v3"/></svg>
+        </span>
+        <span class="care-nav__label">Worker Mileage Optimizer</span>
+      </button>
+      <button
+        class="care-nav__item"
+        type="button"
         [class.is-active]="activePage() === 'route'"
         (click)="setActivePage('route')"
       >
@@ -203,6 +214,10 @@
         <div class="worker-form__title">{{ editingWorkerId() ? 'Edit worker' : 'Add worker' }}</div>
         <div class="worker-form__grid">
           <div class="field">
+            <label for="workerStaffNumber">Staff number</label>
+            <input id="workerStaffNumber" type="text" [formControl]="workerStaffNumberControl" placeholder="e.g. EMP001">
+          </div>
+          <div class="field">
             <label for="workerName">Name</label>
             <input id="workerName" type="text" [formControl]="workerNameControl" placeholder="Full name">
           </div>
@@ -245,12 +260,13 @@
       <section class="workers-search">
         <div class="field">
           <label for="workerSearch">Search workers</label>
-          <input id="workerSearch" type="search" [formControl]="workerSearchControl" placeholder="Search name, email, area, address">
+          <input id="workerSearch" type="search" [formControl]="workerSearchControl" placeholder="Search staff number, name, email, area, address">
         </div>
       </section>
 
       <div class="workers-table">
         <div class="workers-table__head">
+          <div>Staff number</div>
           <div>Name</div>
           <div>Email</div>
           <div>Phone</div>
@@ -260,6 +276,7 @@
         </div>
 
         <div class="workers-table__row" *ngFor="let worker of filteredWorkers()">
+          <div>{{ worker.staffNumber || 'Not set' }}</div>
           <div>{{ worker.name }}</div>
           <div>{{ worker.email }}</div>
           <div>{{ worker.phone }}</div>
@@ -268,6 +285,9 @@
             {{ worker.homeAddress || 'Not set' }}
           </div>
           <div class="workers-table__actions">
+            <button type="button" aria-label="View uploaded mileage visits" title="View uploaded mileage visits" (click)="viewWorkerUploadedVisits(worker)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-3 3 2 5-6"/></svg>
+            </button>
             <button type="button" aria-label="Edit worker" (click)="editWorker(worker)">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
             </button>
@@ -280,6 +300,156 @@
       <div class="empty-state empty-state--compact" *ngIf="filteredWorkers().length === 0">
         No workers match your search.
       </div>
+
+      <section class="worker-uploaded-visits" *ngIf="selectedWorkerMileageWorker() as worker">
+        <div class="worker-uploaded-visits__header">
+          <div>
+            <h2>Uploaded visits for {{ worker.name }}</h2>
+            <p>Staff number {{ worker.staffNumber }}</p>
+          </div>
+          <span *ngIf="isWorkerMileageLoading()">Loading...</span>
+        </div>
+
+        <div class="uploaded-visits-table" *ngIf="selectedWorkerMileageVisits().length > 0">
+          <div class="uploaded-visits-table__head">
+            <div>Date</div>
+            <div>Visit time</div>
+            <div>Address</div>
+            <div>Report</div>
+          </div>
+          <div class="uploaded-visits-table__row" *ngFor="let visit of selectedWorkerMileageVisits()">
+            <div>{{ visit.visitDate | date: 'mediumDate' }}</div>
+            <div>{{ formatVisitTimeRange(visit) }}</div>
+            <div>{{ visit.address }}</div>
+            <div>#{{ visit.reportId }}</div>
+          </div>
+        </div>
+
+        <div class="empty-state empty-state--compact" *ngIf="!isWorkerMileageLoading() && selectedWorkerMileageVisits().length === 0">
+          No uploaded Excel visits found for this staff number.
+        </div>
+      </section>
+    </section>
+
+    <section class="worker-mileage-page" *ngIf="activePage() === 'worker-mileage'">
+      <header class="reports-header">
+        <h1>Workers Mileage Calculator</h1>
+        <p>Upload the monthly visit worksheet and download calculated mileage by staff number.</p>
+      </header>
+
+      <section class="mileage-upload-card">
+        <div class="mileage-upload-card__intro">
+          <h2>Monthly mileage upload</h2>
+          <p>The workbook must include Staff Number, Date, Visit Time, and Address columns.</p>
+        </div>
+
+        <div class="field mileage-upload-card__field">
+          <label for="mileageFile">Excel file</label>
+          <input
+            id="mileageFile"
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            (change)="onMileageFileSelected($event)"
+          >
+        </div>
+
+        <div class="mileage-upload-card__selected" *ngIf="mileageFile() as file">
+          <span>{{ file.name }}</span>
+          <small>{{ (file.size / 1024).toFixed(1) }} KB</small>
+        </div>
+
+        <div class="visit-form__actions">
+          <button
+            class="workers-add mileage-upload-card__calculate"
+            type="button"
+            [disabled]="!mileageFile() || isMileageUploading()"
+            (click)="uploadWorkerMileage()"
+          >
+            {{ isMileageUploading() ? 'Calculating...' : 'Calculate mileage' }}
+          </button>
+        </div>
+
+        <div class="form-message" *ngIf="mileageUploadMessage()">
+          {{ mileageUploadMessage() }}
+        </div>
+      </section>
+
+      <section class="mileage-result" *ngIf="selectedMileageReport() as report">
+        <div class="mileage-result__header">
+          <div>
+            <h2>{{ report.fileName || 'Mileage report' }}</h2>
+            <p>{{ report.reportMonth }} - {{ report.rows.length }} staff member{{ report.rows.length === 1 ? '' : 's' }} - {{ report.createdAt | date: 'medium' }}</p>
+          </div>
+          <button
+            class="mileage-result__download"
+            type="button"
+            [disabled]="isMileageDownloading()"
+            (click)="downloadMileageReport(report)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            {{ isMileageDownloading() ? 'Downloading...' : 'Download workbook' }}
+          </button>
+        </div>
+
+        <div class="mileage-summary">
+          <article class="stat-card">
+            <div class="stat-card__label">Staff</div>
+            <div class="stat-card__value">{{ report.rows.length }}</div>
+            <div class="stat-card__meta">in this report</div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card__label">Total mileage</div>
+            <div class="stat-card__value">{{ selectedMileageTotal().toFixed(2) }}</div>
+            <div class="stat-card__meta">from uploaded visits</div>
+          </article>
+        </div>
+
+        <div class="mileage-table" *ngIf="report.rows.length > 0">
+          <div class="mileage-table__head">
+            <div>Staff number</div>
+            <div>Total mileage</div>
+          </div>
+          <div class="mileage-table__row" *ngFor="let row of report.rows">
+            <div>{{ row.staffNumber }}</div>
+            <div>{{ formatMileageValue(row.totalMileage) }}</div>
+          </div>
+        </div>
+
+        <div class="empty-state empty-state--compact" *ngIf="report.rows.length === 0">
+          This report does not have mileage rows yet.
+        </div>
+
+        <div class="uploaded-visits-table uploaded-visits-table--report" *ngIf="(report.visits ?? []).length > 0">
+          <div class="uploaded-visits-table__head">
+            <div>Staff number</div>
+            <div>Date</div>
+            <div>Visit time</div>
+            <div>Address</div>
+          </div>
+          <div class="uploaded-visits-table__row" *ngFor="let visit of report.visits ?? []">
+            <div>{{ visit.staffNumber }}</div>
+            <div>{{ visit.visitDate | date: 'mediumDate' }}</div>
+            <div>{{ formatVisitTimeRange(visit) }}</div>
+            <div>{{ visit.address }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mileage-history" *ngIf="mileageReports().length > 0">
+        <h2>Previous reports</h2>
+        <div class="mileage-history__list">
+          <button
+            class="mileage-history__item"
+            type="button"
+            *ngFor="let report of mileageReports()"
+            [class.is-selected]="selectedMileageReport()?.id === report.id"
+            (click)="viewMileageReport(report)"
+          >
+            <span>{{ report.fileName || ('Mileage ' + report.reportMonth) }}</span>
+            <small>{{ report.reportMonth }} - {{ report.rows.length }} rows</small>
+          </button>
+        </div>
+      </section>
     </section>
 
     <section class="schedule-page" *ngIf="activePage() === 'schedule'">
@@ -604,7 +774,7 @@
                   [disabled]="!settingsStartSelected()"
                   style="padding: 8px 12px; white-space: nowrap;"
                 >
-                  📍 Use Settings
+                  ðŸ“ Use Settings
                 </button>
               </div>
               <div class="suggestions" *ngIf="originSuggestions().length > 0">
@@ -619,13 +789,13 @@
               </div>
               <div style="font-size: 12px; color: #666; margin-top: 6px;" *ngIf="originSelected() || useSettingsOrigin()">
                 <span *ngIf="originSelected() && !useSettingsOrigin()">
-                  ✓ Origin: <strong>{{ originSelected()?.displayName }}</strong>
+                  âœ“ Origin: <strong>{{ originSelected()?.displayName }}</strong>
                   <button type="button" class="link-btn" (click)="clearOriginAndUseManual()" style="margin-left: 8px; color: #0066cc; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0; font-size: 12px;">
                     Change
                   </button>
                 </span>
                 <span *ngIf="useSettingsOrigin()">
-                  ✓ Using settings origin: <strong>{{ settingsStartSelected()?.displayName }}</strong>
+                  âœ“ Using settings origin: <strong>{{ settingsStartSelected()?.displayName }}</strong>
                   <button type="button" class="link-btn" (click)="clearOriginAndUseManual()" style="margin-left: 8px; color: #0066cc; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0; font-size: 12px;">
                     Enter manual origin
                   </button>
@@ -811,3 +981,4 @@
     </section>
   </main>
 </div>
+

@@ -1,4 +1,4 @@
-export const DEFAULT_API_BASE_URL = 'https://route-navigator-backend.onrender.com';
+﻿export const DEFAULT_API_BASE_URL = 'https://route-navigator-backend.onrender.com';
 
 export function getApiBaseUrl(): string {
   const fromWindow = (globalThis as any)?.ROUTENAV_API_BASE_URL;
@@ -17,7 +17,13 @@ export const API_ENDPOINTS = {
   journeyRoute: (id: string) => `${getApiBaseUrl()}/api/journeys/${encodeURIComponent(id)}`,
   visits: () => `${getApiBaseUrl()}/api/visits`,
   visit: (id: string) => `${getApiBaseUrl()}/api/visits/${encodeURIComponent(id)}`,
+  mileageUpload: () => `${getApiBaseUrl()}/api/mileage/upload`,
+  mileageReports: () => `${getApiBaseUrl()}/api/mileage/reports`,
+  mileageReport: (id: string | number) => `${getApiBaseUrl()}/api/mileage/reports/${encodeURIComponent(String(id))}`,
+  mileageReportDownload: (id: string | number) => `${getApiBaseUrl()}/api/mileage/reports/${encodeURIComponent(String(id))}/download`,
+  workerMileageVisits: (staffNumber: string) => `${getApiBaseUrl()}/api/mileage/visits/staff/${encodeURIComponent(staffNumber)}`,
   workers: () => `${getApiBaseUrl()}/api/workers`,
   worker: (id: string | number) => `${getApiBaseUrl()}/api/workers/${encodeURIComponent(String(id))}`
 };
+
 

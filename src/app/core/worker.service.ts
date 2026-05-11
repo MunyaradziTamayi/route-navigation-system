@@ -1,9 +1,10 @@
-import { HttpClient } from '@angular/common/http';
+﻿import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_ENDPOINTS } from './api.config';
 
 export type WorkerPayload = {
+  staffNumber: string;
   name: string;
   email: string;
   phone?: string;
@@ -37,3 +38,4 @@ export class WorkerService {
     return firstValueFrom(this.http.delete<void>(API_ENDPOINTS.worker(id)));
   }
 }
+

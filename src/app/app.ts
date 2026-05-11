@@ -1,17 +1,26 @@
-import { CommonModule, DatePipe } from '@angular/common';
+﻿import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, type WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { GeocodingService, type GeocodeResult } from './core/geocoding.service';
+import { MileageUploadService, type WorkerMileageReport, type WorkerMileageVisit } from './core/mileage-upload.service';
 import { RouteService, type RouteRequest, type RouteResponse } from './core/route.service';
 import { VisitService, type VisitPayload, type VisitResponse } from './core/visit.service';
 import { WorkerService, type WorkerResponse } from './core/worker.service';
 import { MapCanvasComponent } from './map/map-canvas.component';
 
-type AppPage = 'dashboard' | 'schedule' | 'workers' | 'route' | 'reports' | 'settings';
+type AppPage =
+  | 'dashboard'
+  | 'schedule'
+  | 'workers'
+  | 'worker-mileage'
+  | 'route'
+  | 'reports'
+  | 'settings';
 
 type CareWorker = {
   id: string;
+  staffNumber: string;
   name: string;
   email: string;
   phone: string;
@@ -77,6 +86,7 @@ export class App {
   private readonly routes = inject(RouteService);
   private readonly visitsApi = inject(VisitService);
   private readonly workersApi = inject(WorkerService);
+  private readonly mileageUploadApi = inject(MileageUploadService);
 
   readonly form = new FormGroup({
     origin: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -106,6 +116,7 @@ export class App {
   readonly selectedRouteWorkerIds = signal<string[]>(this.firstWorkerIdList());
   readonly selectedScheduleWorkerIds = signal<string[]>(this.firstWorkerIdList());
   readonly workerSearchControl = new FormControl('', { nonNullable: true });
+  readonly workerStaffNumberControl = new FormControl('', { nonNullable: true });
   readonly workerNameControl = new FormControl('', { nonNullable: true });
   readonly workerEmailControl = new FormControl('', { nonNullable: true });
   readonly workerPhoneControl = new FormControl('', { nonNullable: true });
@@ -115,6 +126,15 @@ export class App {
   readonly isWorkerFormOpen = signal(false);
   readonly editingWorkerId = signal<string | null>(null);
   readonly workerFormMessage = signal<string | null>(null);
+  readonly mileageFile = signal<File | null>(null);
+  readonly isMileageUploading = signal(false);
+  readonly mileageUploadMessage = signal<string | null>(null);
+  readonly mileageReports = signal<WorkerMileageReport[]>([]);
+  readonly selectedMileageReport = signal<WorkerMileageReport | null>(null);
+  readonly isMileageDownloading = signal(false);
+  readonly selectedWorkerMileageWorker = signal<CareWorker | null>(null);
+  readonly selectedWorkerMileageVisits = signal<WorkerMileageVisit[]>([]);
+  readonly isWorkerMileageLoading = signal(false);
   readonly routeVisitStartControl = new FormControl('13:00', { nonNullable: true });
   readonly routeVisitEndControl = new FormControl('14:00', { nonNullable: true });
   readonly routeVisitsPerDayControl = new FormControl(1, { nonNullable: true });
@@ -183,7 +203,7 @@ export class App {
     if (!query) return this.workers();
 
     return this.workers().filter((worker) =>
-      [worker.name, worker.email, worker.phone, worker.area, worker.homeAddress ?? '']
+      [worker.staffNumber, worker.name, worker.email, worker.phone, worker.area, worker.homeAddress ?? '']
         .join(' ')
         .toLowerCase()
         .includes(query)
@@ -282,12 +302,12 @@ export class App {
 
   readonly distanceText = computed(() => {
     const distanceKm = this.route()?.distanceKm;
-    return typeof distanceKm === 'number' && distanceKm > 0 ? `${distanceKm.toFixed(2)} km` : '—';
+    return typeof distanceKm === 'number' && distanceKm > 0 ? `${distanceKm.toFixed(2)} km` : 'â€”';
   });
 
   readonly durationText = computed(() => {
     const durationSeconds = this.route()?.durationSeconds;
-    if (typeof durationSeconds !== 'number' || durationSeconds <= 0) return '—';
+    if (typeof durationSeconds !== 'number' || durationSeconds <= 0) return 'â€”';
     const minutes = Math.round(durationSeconds / 60);
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
@@ -297,26 +317,33 @@ export class App {
 
   readonly oneTripText = computed(() => {
     const distanceKm = this.route()?.distanceKm;
-    if (typeof distanceKm !== 'number' || distanceKm <= 0) return '—';
+    if (typeof distanceKm !== 'number' || distanceKm <= 0) return 'â€”';
 
     return this.formatDistance(distanceKm);
   });
 
   readonly roundTripText = computed(() => {
     const distanceKm = this.route()?.distanceKm;
-    if (typeof distanceKm !== 'number' || distanceKm <= 0) return '—';
+    if (typeof distanceKm !== 'number' || distanceKm <= 0) return 'â€”';
 
     return this.formatDistance(distanceKm * 2);
   });
 
   readonly totalDistanceText = computed(() => {
     const distanceKm = this.route()?.distanceKm;
-    if (typeof distanceKm !== 'number' || distanceKm <= 0) return '—';
+    if (typeof distanceKm !== 'number' || distanceKm <= 0) return 'â€”';
 
     const trips = Math.max(1, Math.floor(Number(this.trips()) || 1));
     const multiplier = this.roundTrip() ? 2 : 1;
     return this.formatDistance(distanceKm * trips * multiplier);
   });
+
+  readonly selectedMileageTotal = computed(() =>
+    (this.selectedMileageReport()?.rows ?? []).reduce(
+      (total, row) => total + Number(row.totalMileage ?? 0),
+      0
+    )
+  );
 
   constructor() {
     const originControl = this.form.controls.origin;
@@ -445,6 +472,7 @@ export class App {
 
     this.refreshWorkers();
     this.refreshVisits();
+    this.refreshMileageReports();
   }
 
   private refreshVisits() {
@@ -455,11 +483,35 @@ export class App {
     });
   }
 
+  private refreshMileageReports(selectedReportId?: string | number) {
+    this.mileageUploadApi.listReports().subscribe({
+      next: (reports) => {
+        const rows = reports ?? [];
+        this.mileageReports.set(rows);
+
+        const selected =
+          rows.find((report) => String(report.id) === String(selectedReportId)) ??
+          this.selectedMileageReport() ??
+          rows[0] ??
+          null;
+        this.selectedMileageReport.set(
+          selected ? rows.find((report) => String(report.id) === String(selected.id)) ?? selected : null
+        );
+      },
+      error: () => {
+        this.showError(this.mileageUploadMessage, 'Could not load mileage reports from the backend.');
+        this.mileageReports.set([]);
+        this.selectedMileageReport.set(null);
+      }
+    });
+  }
+
   private refreshWorkers() {
     this.workersApi.list().subscribe({
       next: (workers) => {
         const converted = (workers ?? []).map((w) => ({
           id: String(w.id),
+          staffNumber: w.staffNumber ?? '',
           name: w.name,
           email: w.email,
           phone: w.phone ?? '',
@@ -776,19 +828,21 @@ export class App {
   }
 
   async saveWorker() {
+    const staffNumber = this.workerStaffNumberControl.value.trim();
     const name = this.workerNameControl.value.trim();
     const email = this.workerEmailControl.value.trim();
     const phone = this.workerPhoneControl.value.trim();
     const area = this.workerAreaControl.value.trim();
     const homeAddress = this.workerHomeAddressControl.value.trim();
 
-    if (!name || !email || !phone || !area) {
-      this.showError(this.workerFormMessage, 'Enter a name, email, phone number, and area.');
+    if (!staffNumber || !name || !email || !phone || !area) {
+      this.showError(this.workerFormMessage, 'Enter a staff number, name, email, phone number, and area.');
       return;
     }
 
     const id = this.editingWorkerId();
     const payload = {
+      staffNumber,
       name,
       email,
       phone,
@@ -816,6 +870,7 @@ export class App {
   editWorker(worker: CareWorker) {
     this.editingWorkerId.set(worker.id);
     this.isWorkerFormOpen.set(true);
+    this.workerStaffNumberControl.setValue(worker.staffNumber);
     this.workerNameControl.setValue(worker.name);
     this.workerEmailControl.setValue(worker.email);
     this.workerPhoneControl.setValue(worker.phone);
@@ -824,6 +879,26 @@ export class App {
     this.workerFormMessage.set(null);
   }
 
+  viewWorkerUploadedVisits(worker: CareWorker) {
+    if (!worker.staffNumber) {
+      this.showError(this.workerFormMessage, 'This worker does not have a staff number.');
+      return;
+    }
+
+    this.selectedWorkerMileageWorker.set(worker);
+    this.isWorkerMileageLoading.set(true);
+    this.mileageUploadApi.getVisitsByStaffNumber(worker.staffNumber).subscribe({
+      next: (visits) => {
+        this.selectedWorkerMileageVisits.set(visits ?? []);
+        this.isWorkerMileageLoading.set(false);
+      },
+      error: () => {
+        this.selectedWorkerMileageVisits.set([]);
+        this.isWorkerMileageLoading.set(false);
+        this.showError(this.workerFormMessage, 'Could not load uploaded visits for this staff number.');
+      }
+    });
+  }
   async deleteWorker(workerId: string) {
     try {
       await this.workersApi.delete(workerId);
@@ -849,6 +924,64 @@ export class App {
       this.showSuccess(this.workerFormMessage, 'Worker deleted.');
     } catch (error) {
       this.showError(this.workerFormMessage, 'Failed to delete worker. Please try again.');
+    }
+  }
+
+  onMileageFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.mileageFile.set(file);
+    this.mileageUploadMessage.set(null);
+  }
+
+  async uploadWorkerMileage() {
+    const file = this.mileageFile();
+    if (!file) {
+      this.showError(this.mileageUploadMessage, 'Choose an Excel file to upload.');
+      return;
+    }
+
+    this.isMileageUploading.set(true);
+    this.mileageUploadMessage.set('Calculating mileage from the uploaded worksheet...');
+
+    try {
+      const report = await this.mileageUploadApi.upload(file);
+      this.selectedMileageReport.set(report);
+      this.refreshMileageReports(report.id);
+      this.showSuccess(this.mileageUploadMessage, 'Mileage report calculated. You can preview it below or download the workbook.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to calculate mileage.';
+      this.showError(this.mileageUploadMessage, message);
+    } finally {
+      this.isMileageUploading.set(false);
+    }
+  }
+
+  viewMileageReport(report: WorkerMileageReport) {
+    this.mileageUploadApi.getReport(report.id).subscribe({
+      next: (freshReport) => {
+        this.selectedMileageReport.set(freshReport);
+        this.mileageUploadMessage.set(null);
+      },
+      error: () => this.showError(this.mileageUploadMessage, 'Could not load that mileage report.')
+    });
+  }
+
+  async downloadMileageReport(report = this.selectedMileageReport()) {
+    if (!report) {
+      this.showError(this.mileageUploadMessage, 'Choose a mileage report to download.');
+      return;
+    }
+
+    this.isMileageDownloading.set(true);
+    try {
+      const result = await this.mileageUploadApi.downloadReport(report.id);
+      this.downloadBlob(result.blob, result.filename);
+      this.showSuccess(this.mileageUploadMessage, 'Mileage workbook downloaded.');
+    } catch {
+      this.showError(this.mileageUploadMessage, 'Failed to download the mileage workbook.');
+    } finally {
+      this.isMileageDownloading.set(false);
     }
   }
 
@@ -1197,6 +1330,15 @@ export class App {
     return `${(distanceKm * milesPerKm).toFixed(2)} miles`;
   }
 
+  formatMileageValue(value: number): string {
+    return Number(value ?? 0).toFixed(2);
+  }
+
+  formatVisitTimeRange(visit: WorkerMileageVisit): string {
+    if (visit.startTime && visit.endTime) return `${visit.startTime} - ${visit.endTime}`;
+    return visit.startTime || visit.endTime || 'Not set';
+  }
+
   private formatDistance(distanceKm: number): string {
     const unit = this.unit();
     if (unit === 'km') return `${distanceKm.toFixed(2)} km`;
@@ -1210,6 +1352,15 @@ export class App {
 
   toggleSidebar() {
     this.isSidebarCollapsed.update((collapsed) => !collapsed);
+  }
+
+  private downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   private formatDateInput(date: Date): string {
@@ -1331,6 +1482,7 @@ export class App {
   private resetWorkerForm() {
     this.editingWorkerId.set(null);
     this.isWorkerFormOpen.set(false);
+    this.workerStaffNumberControl.setValue('');
     this.workerNameControl.setValue('');
     this.workerEmailControl.setValue('');
     this.workerPhoneControl.setValue('');
@@ -1399,3 +1551,5 @@ export class App {
     return date.getTime();
   }
 }
+
+

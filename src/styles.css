@@ -1,4 +1,4 @@
-/* You can add global styles to this file, and also import other style files */
+﻿/* You can add global styles to this file, and also import other style files */
 
 html,
 body {
@@ -475,7 +475,7 @@ body {
 .workers-table__head,
 .workers-table__row {
   display: grid;
-  grid-template-columns: 1fr 1.25fr 1fr 0.9fr 1.8fr 80px;
+  grid-template-columns: 0.85fr 1fr 1.2fr 0.9fr 0.9fr 1.6fr 112px;
   align-items: center;
   column-gap: 24px;
   padding: 0 16px;
@@ -944,7 +944,8 @@ body {
 }
 
 .reports-page,
-.settings-page {
+.settings-page,
+.worker-mileage-page {
   min-height: 100vh;
   padding: 36px 30px 48px;
 }
@@ -1074,6 +1075,219 @@ body {
   background: #ffffff;
   color: #061a32;
   font-size: 14px;
+}
+
+.mileage-upload-card {
+  max-width: 780px;
+  display: grid;
+  gap: 16px;
+  border: 1px solid #cfdbe8;
+  border-radius: 10px;
+  padding: 22px 20px 20px;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(28, 52, 75, 0.08);
+}
+
+.mileage-upload-card__intro h2 {
+  margin: 0;
+  color: #071d34;
+  font-size: 18px;
+}
+
+.mileage-upload-card__intro p {
+  margin: 8px 0 0;
+  color: #6b7d99;
+  font-size: 14px;
+}
+
+.mileage-upload-card__field {
+  margin: 0;
+}
+
+.mileage-upload-card label {
+  color: #263852;
+  font-size: 13px;
+  opacity: 1;
+}
+
+.mileage-upload-card input[type='file'] {
+  border: 1px dashed #9fb2c8;
+  border-radius: 8px;
+  padding: 13px;
+  background: #f7f9fc;
+  color: #061a32;
+}
+
+.mileage-upload-card__selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #dbe5ef;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fbfdff;
+  color: #263852;
+  font-size: 14px;
+}
+
+.mileage-upload-card__selected small {
+  flex: 0 0 auto;
+  color: #6b7d99;
+}
+
+.mileage-upload-card__calculate {
+  background: #124e68;
+  box-shadow: 0 6px 16px rgba(18, 78, 104, 0.18);
+}
+
+.mileage-upload-card__calculate:hover:not(:disabled) {
+  background: #0d4058;
+}
+
+.mileage-result,
+.mileage-history {
+  max-width: 940px;
+  margin-top: 20px;
+}
+
+.mileage-result__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.mileage-result__header h2,
+.mileage-history h2 {
+  margin: 0;
+  color: #071d34;
+  font-size: 18px;
+}
+
+.mileage-result__header p {
+  margin: 7px 0 0;
+  color: #6b7d99;
+  font-size: 13px;
+}
+
+.mileage-result__download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border: 1px solid #b8c7d8;
+  border-radius: 8px;
+  padding: 8px 13px;
+  background: #ffffff;
+  color: #124e68;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mileage-result__download:hover:not(:disabled) {
+  background: #eef7fc;
+  border-color: #91afc5;
+}
+
+.mileage-result__download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mileage-result__download svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.mileage-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mileage-table {
+  overflow: hidden;
+  border: 1px solid #cfdbe8;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(28, 52, 75, 0.08);
+}
+
+.mileage-table__head,
+.mileage-table__row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(140px, 0.7fr);
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+}
+
+.mileage-table__head {
+  min-height: 40px;
+  border-bottom: 1px solid #cfdbe8;
+  background: #f7f9fc;
+  color: #697b99;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.mileage-table__row {
+  min-height: 52px;
+  border-bottom: 1px solid #d8e1ea;
+  color: #061a32;
+  font-size: 14px;
+}
+
+.mileage-table__row:last-child {
+  border-bottom: 0;
+}
+
+.mileage-history__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.mileage-history__item {
+  display: grid;
+  gap: 5px;
+  min-height: 64px;
+  border: 1px solid #cfdbe8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #263852;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mileage-history__item:hover,
+.mileage-history__item.is-selected {
+  border-color: #91afc5;
+  background: #eef7fc;
+}
+
+.mileage-history__item span {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mileage-history__item small {
+  color: #6b7d99;
+  font-size: 12px;
 }
 
 .reports-empty {
@@ -1334,7 +1548,8 @@ body {
   .placeholder-page,
   .schedule-page,
   .reports-page,
-  .settings-page {
+  .settings-page,
+  .worker-mileage-page {
     min-height: auto;
     padding: 24px 16px 32px;
   }
@@ -1354,13 +1569,32 @@ body {
 
   .workers-table__head,
   .workers-table__row {
-    min-width: 760px;
+    min-width: 920px;
   }
 
   .reports-filter,
   .report-summary,
+  .mileage-summary,
   .worker-form__grid {
     grid-template-columns: 1fr;
+  }
+
+  .mileage-result__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mileage-result__download {
+    justify-content: center;
+  }
+
+  .mileage-table {
+    overflow-x: auto;
+  }
+
+  .mileage-table__head,
+  .mileage-table__row {
+    min-width: 480px;
   }
 
   .reports-table {
@@ -1403,5 +1637,92 @@ body {
   .route-view {
     height: auto;
     overflow: visible;
+  }
+}
+
+.worker-uploaded-visits {
+  margin-top: 20px;
+  border: 1px solid #cfdbe8;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.worker-uploaded-visits__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.worker-uploaded-visits__header h2 {
+  margin: 0;
+  color: #071d34;
+  font-size: 18px;
+}
+
+.worker-uploaded-visits__header p {
+  margin: 5px 0 0;
+  color: #6b7d99;
+  font-size: 13px;
+}
+
+.uploaded-visits-table {
+  overflow: hidden;
+  border: 1px solid #cfdbe8;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.uploaded-visits-table--report {
+  margin-top: 16px;
+}
+
+.uploaded-visits-table__head,
+.uploaded-visits-table__row {
+  display: grid;
+  grid-template-columns: 0.9fr 0.9fr minmax(220px, 2fr) 0.6fr;
+  align-items: center;
+  padding: 0 14px;
+  column-gap: 12px;
+}
+
+.uploaded-visits-table__head {
+  min-height: 40px;
+  border-bottom: 1px solid #cfdbe8;
+  background: #f7f9fc;
+  color: #59697f;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.uploaded-visits-table__row {
+  min-height: 52px;
+  border-bottom: 1px solid #d8e1ea;
+  color: #061a32;
+  font-size: 13px;
+}
+
+.uploaded-visits-table__row:last-child {
+  border-bottom: 0;
+}
+
+.uploaded-visits-table--report .uploaded-visits-table__head,
+.uploaded-visits-table--report .uploaded-visits-table__row {
+  grid-template-columns: 0.8fr 0.8fr 0.8fr minmax(220px, 2fr);
+}
+
+@media (max-width: 760px) {
+  .uploaded-visits-table {
+    overflow-x: auto;
+  }
+
+  .uploaded-visits-table__head,
+  .uploaded-visits-table__row,
+  .uploaded-visits-table--report .uploaded-visits-table__head,
+  .uploaded-visits-table--report .uploaded-visits-table__row {
+    min-width: 760px;
   }
 }
