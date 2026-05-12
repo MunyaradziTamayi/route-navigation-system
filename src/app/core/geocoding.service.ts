@@ -16,13 +16,6 @@ type GeocodeItem = {
   lon: string | number;
 };
 
-const ZIMBABWE_BOUNDS = {
-  minLat: -22.5,
-  maxLat: -15.5,
-  minLon: 25,
-  maxLon: 33.2
-};
-
 @Injectable({ providedIn: 'root' })
 export class GeocodingService {
   private readonly http = inject(HttpClient);
@@ -32,7 +25,7 @@ export class GeocodingService {
     if (q.length < 3) return of<GeocodeResult[]>([]);
 
     return this.http
-      .get<GeocodeItem[]>(API_ENDPOINTS.geocode(), { params: { q: `${q}, Zimbabwe` } })
+      .get<GeocodeItem[]>(API_ENDPOINTS.geocode(), { params: { q } })
       .pipe(
         map((items) =>
           (items ?? [])
@@ -45,8 +38,7 @@ export class GeocodingService {
               (r) =>
                 Number.isFinite(r.lat) &&
                 Number.isFinite(r.lon) &&
-                !!r.displayName &&
-                this.isInZimbabwe(r)
+                !!r.displayName
             )
         )
       );
@@ -55,15 +47,6 @@ export class GeocodingService {
   async bestMatch(query: string): Promise<GeocodeResult | null> {
     const results = await firstValueFrom(this.search(query));
     return results[0] ?? null;
-  }
-
-  private isInZimbabwe(result: GeocodeResult): boolean {
-    return (
-      result.lat >= ZIMBABWE_BOUNDS.minLat &&
-      result.lat <= ZIMBABWE_BOUNDS.maxLat &&
-      result.lon >= ZIMBABWE_BOUNDS.minLon &&
-      result.lon <= ZIMBABWE_BOUNDS.maxLon
-    );
   }
 }
 

@@ -143,14 +143,14 @@
           <div class="stat-card__meta">saved visit plans</div>
         </article>
         <article class="stat-card">
-          <div class="stat-card__label">Uploaded workers</div>
-          <div class="stat-card__value">{{ uploadedMileageWorkerCount() }}</div>
-          <div class="stat-card__meta">from worker mileage uploads</div>
+          <div class="stat-card__label">Last uploaded file</div>
+          <div class="stat-card__value">{{ lastUploadedFileMileageTotal().toFixed(2) }}</div>
+          <div class="stat-card__meta">total mileage for the last uploaded file</div>
         </article>
         <article class="stat-card">
           <div class="stat-card__label">Uploaded mileage</div>
           <div class="stat-card__value">{{ uploadedMileageTotal().toFixed(2) }}</div>
-          <div class="stat-card__meta">total miles across uploads</div>
+          <div class="stat-card__meta">Total mileage for all the months</div>
         </article>
         <article class="stat-card">
           <div class="stat-card__label">Status</div>
@@ -401,6 +401,9 @@
         <button class="workers-add app-primary-action" type="button" (click)="openMileageUpload()">
           Upload file
         </button>
+        <button class="workers-add mileage-report-picker-button" type="button" *ngIf="filteredMileageReports().length > 0" (click)="openMileageReportSelector()">
+          Monthly reports
+        </button>
       </div>
 
       <div class="visit-dialog-backdrop" *ngIf="isMileageUploadOpen()">
@@ -526,21 +529,50 @@
         </div>
       </section>
 
-      <section class="mileage-history" *ngIf="filteredMileageReports().length > 0">
-        <h2>Monthly reports</h2>
-        <div class="mileage-history__list">
-          <button
-            class="mileage-history__item"
-            type="button"
-            *ngFor="let report of filteredMileageReports()"
-            [class.is-selected]="isSelectedMileageReport(report)"
-            (click)="viewMileageReport(report)"
-          >
-            <span>{{ report.fileName || formatMileageReportMonth(report) }}</span>
-            <small>{{ report.reportMonth }} - {{ report.rows.length }} rows</small>
-          </button>
+      <div class="mileage-report-drawer-backdrop" *ngIf="isMileageReportSelectorOpen()" (click)="closeMileageReportSelector()">
+        <aside class="mileage-report-drawer" role="dialog" aria-modal="true" aria-label="Monthly reports" (click)="$event.stopPropagation()">
+          <div class="mileage-report-drawer__header">
+            <div>
+              <h2>Monthly reports</h2>
+              <p>Select a month, or show every selected report.</p>
+            </div>
+            <button type="button" aria-label="Close monthly reports" (click)="closeMileageReportSelector()">x</button>
+          </div>
+          <div class="mileage-history__list">
+            <button
+              class="mileage-history__item"
+              type="button"
+              [class.is-selected]="selectedMileageReport()?.reportMonth === 'all'"
+              (click)="viewAllMileageReports()"
+            >
+              <span>All reports</span>
+              <small>Combined mileage across selected months</small>
+            </button>
+            <ng-container *ngFor="let report of downloadableMileageReports()">
+              <div class="mileage-history__report">
+                <button
+                  class="mileage-history__item"
+                  type="button"
+                  [class.is-selected]="isSelectedMileageReport(report)"
+                  (click)="viewMileageReport(report)"
+                >
+                  <span>{{ formatMileageReportFileLabel(report) }}</span>
+                  <small>Generated {{ formatMileageReportGeneratedDate(report) }} - {{ report.rows.length }} row{{ report.rows.length === 1 ? '' : 's' }}</small>
+                </button>
+                <button
+                  class="mileage-history__download"
+                  type="button"
+                  [disabled]="isMileageDownloading()"
+                  [attr.aria-label]="'Download ' + formatMileageReportFileLabel(report)"
+                  (click)="downloadMileageReport(report)"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                </button>
+              </div>
+            </ng-container>
         </div>
-      </section>
+        </aside>
+      </div>
     </section>
 
     <section class="schedule-page" *ngIf="activePage() === 'schedule'">
@@ -573,10 +605,7 @@
       <div class="visits-heading">
         <div>
           <h2>Visits</h2>
-          <p>
-            Starting from:
-            {{ configuredStartAddress() || 'Set a starting address in Settings' }}
-          </p>
+          <p>Add visits with their own origin and destination.</p>
         </div>
       </div>
 
@@ -599,8 +628,23 @@
             </div>
 
             <div class="field visit-dialog__wide">
+              <label for="visitOrigin">Origin *</label>
+              <input id="visitOrigin" type="text" [formControl]="scheduleOriginControl" autocomplete="off" placeholder="Search any place or road">
+              <div class="suggestions suggestions--light" *ngIf="scheduleOriginSuggestions().length > 0">
+                <button
+                  class="suggestion"
+                  type="button"
+                  *ngFor="let s of scheduleOriginSuggestions()"
+                  (click)="selectScheduleOrigin(s)"
+                >
+                  <div class="suggestion__main">{{ s.displayName }}</div>
+                </button>
+              </div>
+            </div>
+
+            <div class="field visit-dialog__wide">
               <label for="visitDestination">Address *</label>
-              <input id="visitDestination" type="text" [formControl]="scheduleDestinationControl" autocomplete="off" placeholder="Search a Zimbabwe place or road">
+              <input id="visitDestination" type="text" [formControl]="scheduleDestinationControl" autocomplete="off" placeholder="Search any place or road">
               <div class="suggestions suggestions--light" *ngIf="scheduleDestinationSuggestions().length > 0">
                 <button
                   class="suggestion"
@@ -762,6 +806,40 @@
         </article>
       </div>
 
+      <div class="report-summary" *ngIf="uploadedMileageReportRows().length > 0">
+        <article class="stat-card">
+          <div class="stat-card__label">Uploaded reports</div>
+          <div class="stat-card__value">{{ uploadedMileageReportRows().length }}</div>
+          <div class="stat-card__meta">from worker mileage optimizer</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Uploaded mileage</div>
+          <div class="stat-card__value">{{ uploadedMileageReportsTotal().toFixed(2) }}</div>
+          <div class="stat-card__meta">miles in selected data months</div>
+        </article>
+      </div>
+
+      <div class="reports-table reports-table--uploaded" *ngIf="uploadedMileageReportRows().length > 0">
+        <div class="reports-table__head">
+          <div>Data month</div>
+          <div>Generated</div>
+          <div>Staff rows</div>
+          <div>Total miles</div>
+          <div></div>
+        </div>
+        <div class="reports-table__row" *ngFor="let report of uploadedMileageReportRows()">
+          <div>{{ formatMileageReportMonth(report) }}</div>
+          <div>{{ formatMileageReportGeneratedDate(report) }}</div>
+          <div>{{ report.rows.length }}</div>
+          <div>{{ reportMileageTotal(report).toFixed(2) }}</div>
+          <div class="workers-table__actions">
+            <button type="button" aria-label="Download uploaded mileage report" title="Download report" (click)="downloadMileageReport(report)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="reports-table" *ngIf="reportRows().length > 0">
         <div class="reports-table__head">
           <div>Worker</div>
@@ -792,7 +870,7 @@
         </article>
       </div>
 
-      <div class="reports-empty" *ngIf="reportRows().length === 0">
+      <div class="reports-empty" *ngIf="reportRows().length === 0 && uploadedMileageReportRows().length === 0">
         <div class="reports-empty__icon">
           <span></span>
           <span></span>
@@ -806,37 +884,8 @@
     <section class="settings-page" *ngIf="activePage() === 'settings'">
       <header class="reports-header">
         <h1>Settings</h1>
-        <p>Set the shared route starting address used when creating visits.</p>
+        <p>Manage application data.</p>
       </header>
-
-      <section class="settings-card">
-        <div class="field">
-          <label for="settingsStartAddress">Starting address</label>
-          <input
-            id="settingsStartAddress"
-            type="text"
-            [formControl]="settingsStartAddressControl"
-            autocomplete="off"
-            placeholder="Search a Zimbabwe place or road"
-          >
-          <div class="suggestions suggestions--light" *ngIf="settingsStartAddressSuggestions().length > 0">
-            <button
-              class="suggestion"
-              type="button"
-              *ngFor="let s of settingsStartAddressSuggestions()"
-              (click)="selectSettingsStartAddress(s)"
-            >
-              <div class="suggestion__main">{{ s.displayName }}</div>
-            </button>
-          </div>
-        </div>
-
-        <div class="visit-form__actions">
-          <button class="workers-add" type="button" (click)="saveSettings()">Save settings</button>
-        </div>
-
-        <div class="form-message" *ngIf="settingsMessage()">{{ settingsMessage() }}</div>
-      </section>
 
       <section class="settings-card settings-card--danger">
         <div>
@@ -847,6 +896,8 @@
         <button class="workers-add settings-reset" type="button" [disabled]="isDatabaseResetting()" (click)="resetDatabase()">
           {{ isDatabaseResetting() ? 'Resetting...' : 'Reset database' }}
         </button>
+
+        <div class="form-message" *ngIf="settingsMessage()">{{ settingsMessage() }}</div>
       </section>
     </section>
 
@@ -861,26 +912,13 @@
           <form class="panel" [formGroup]="form" (ngSubmit)="submit()">
             <div class="field">
               <label for="origin">Origin</label>
-              <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                <input
-                  id="origin"
-                  type="text"
-                  formControlName="origin"
-                  autocomplete="off"
-                  placeholder="Search a place..."
-                  style="flex: 1;"
-                >
-                <button
-                  type="button"
-                  class="btn btn--ghost"
-                  title="Use the origin address from Settings"
-                  (click)="useSettingsAsOrigin()"
-                  [disabled]="!settingsStartSelected()"
-                  style="padding: 8px 12px; white-space: nowrap;"
-                >
-                  Use Settings
-                </button>
-              </div>
+              <input
+                id="origin"
+                type="text"
+                formControlName="origin"
+                autocomplete="off"
+                placeholder="Search a place..."
+              >
               <div class="suggestions" *ngIf="originSuggestions().length > 0">
                 <button
                   class="suggestion"
@@ -891,17 +929,11 @@
                   <div class="suggestion__main">{{ s.displayName }}</div>
                 </button>
               </div>
-              <div style="font-size: 12px; color: #666; margin-top: 6px;" *ngIf="originSelected() || useSettingsOrigin()">
-                <span *ngIf="originSelected() && !useSettingsOrigin()">
+              <div style="font-size: 12px; color: #666; margin-top: 6px;" *ngIf="originSelected()">
+                <span>
                   Origin: <strong>{{ originSelected()?.displayName }}</strong>
                   <button type="button" class="link-btn" (click)="clearOriginAndUseManual()" style="margin-left: 8px; color: #0066cc; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0; font-size: 12px;">
                     Change
-                  </button>
-                </span>
-                <span *ngIf="useSettingsOrigin()">
-                  Origin: <strong>{{ settingsStartSelected()?.displayName }}</strong>
-                  <button type="button" class="link-btn" (click)="clearOriginAndUseManual()" style="margin-left: 8px; color: #0066cc; text-decoration: underline; background: none; border: none; cursor: pointer; padding: 0; font-size: 12px;">
-                    Enter manual origin
                   </button>
                 </span>
               </div>

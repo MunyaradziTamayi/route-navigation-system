@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
   visits: () => `${getApiBaseUrl()}/api/visits`,
   visit: (id: string) => `${getApiBaseUrl()}/api/visits/${encodeURIComponent(id)}`,
   mileageUpload: () => `${getApiBaseUrl()}/api/mileage/upload`,
+  mileageUploads: () => `${getApiBaseUrl()}/api/mileage/uploads`,
   mileageReports: () => `${getApiBaseUrl()}/api/mileage/reports`,
   mileageTotals: () => `${getApiBaseUrl()}/api/mileage/totals`,
   mileageReport: (id: string | number) => `${getApiBaseUrl()}/api/mileage/reports/${encodeURIComponent(String(id))}`,

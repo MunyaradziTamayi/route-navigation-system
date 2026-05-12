@@ -27,6 +27,7 @@ export type WorkerMileageVisit = {
 
 export type WorkerMileageReport = {
   id?: number | string;
+  uploadId?: number | string;
   reportMonth: string;
   label?: string;
   totalMileageMiles?: number;
@@ -36,6 +37,16 @@ export type WorkerMileageReport = {
   createdAt?: string;
   rows: WorkerMileageReportRow[];
   visits?: WorkerMileageVisit[];
+};
+
+export type WorkerMileageUpload = {
+  id: number | string;
+  fileName?: string;
+  createdAt?: string;
+  reportCount?: number;
+  reportMonths?: string[];
+  totals?: WorkerMileageReport[];
+  reports?: WorkerMileageReport[];
 };
 
 export type MileageDownloadResult = {
@@ -52,7 +63,7 @@ export type MileageReportFilters = {
 export class MileageUploadService {
   private readonly http = inject(HttpClient);
 
-  async upload(file: File, filters: MileageReportFilters = {}): Promise<WorkerMileageReport[]> {
+  async upload(file: File, filters: MileageReportFilters = {}): Promise<WorkerMileageUpload> {
     const body = new FormData();
     let params = new HttpParams();
     const month = filters.month?.trim();
@@ -65,7 +76,7 @@ export class MileageUploadService {
 
     try {
       return await firstValueFrom(
-        this.http.post<WorkerMileageReport[]>(API_ENDPOINTS.mileageUpload(), body, { params })
+        this.http.post<WorkerMileageUpload>(API_ENDPOINTS.mileageUpload(), body, { params })
       );
     } catch (error) {
       throw new Error(await this.errorMessage(error));
@@ -81,6 +92,21 @@ export class MileageUploadService {
     if (year) params = params.set('year', year);
 
     return this.http.get<WorkerMileageReport[]>(API_ENDPOINTS.mileageTotals(), { params });
+  }
+
+  listUploads() {
+    return this.http.get<WorkerMileageUpload[]>(API_ENDPOINTS.mileageUploads());
+  }
+
+  listDownloadableReports(filters: MileageReportFilters = {}) {
+    let params = new HttpParams();
+    const month = filters.month?.trim();
+    const year = filters.year == null ? '' : String(filters.year).trim();
+
+    if (month) params = params.set('month', month);
+    if (year) params = params.set('year', year);
+
+    return this.http.get<WorkerMileageReport[]>(API_ENDPOINTS.mileageReports(), { params });
   }
 
   getReport(id: string | number) {

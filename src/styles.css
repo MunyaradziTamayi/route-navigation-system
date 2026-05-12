@@ -1101,6 +1101,11 @@ body {
   border-bottom: 0;
 }
 
+.reports-table--uploaded .reports-table__head,
+.reports-table--uploaded .reports-table__row {
+  grid-template-columns: minmax(160px, 1.3fr) repeat(3, minmax(100px, 1fr)) 56px;
+}
+
 .report-visit-list {
   margin-top: 18px;
 }
@@ -1177,8 +1182,15 @@ body {
 .mileage-upload-toolbar {
   max-width: 940px;
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: flex-start;
   margin-bottom: 18px;
+}
+
+.mileage-report-picker-button {
+  background: #ffffff;
+  color: #124e68;
 }
 
 .mileage-upload-dialog {
@@ -1380,6 +1392,112 @@ body {
 .mileage-history__item small {
   color: #6b7d99;
   font-size: 12px;
+}
+
+.mileage-history__report {
+  display: grid;
+  grid-template-columns: 1fr 42px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.mileage-history__report .mileage-history__item {
+  min-width: 0;
+}
+
+.mileage-history__download {
+  display: grid;
+  place-items: center;
+  border: 1px solid #cfdbe8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #124e68;
+  cursor: pointer;
+}
+
+.mileage-history__download:hover:not(:disabled) {
+  border-color: #91afc5;
+  background: #eef7fc;
+}
+
+.mileage-history__download:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mileage-history__download svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.mileage-report-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3100;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.mileage-report-drawer {
+  width: min(420px, 100%);
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  padding: 24px;
+  background: #ffffff;
+  box-shadow: -18px 0 54px rgba(7, 18, 33, 0.24);
+  overflow: auto;
+}
+
+.mileage-report-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #cfd8e3;
+}
+
+.mileage-report-drawer__header h2 {
+  margin: 0;
+  color: #071d34;
+  font-size: 19px;
+}
+
+.mileage-report-drawer__header p {
+  margin: 6px 0 0;
+  color: #6b7d99;
+  font-size: 13px;
+}
+
+.mileage-report-drawer__header button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #475569;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mileage-report-drawer__header button:hover {
+  background: #eef4f9;
+}
+
+.mileage-report-drawer .mileage-history__list {
+  grid-template-columns: 1fr;
+  align-content: start;
+  margin-top: 0;
 }
 
 .reports-empty {

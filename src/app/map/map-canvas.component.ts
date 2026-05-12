@@ -95,7 +95,7 @@ export class MapCanvasComponent implements AfterViewInit, OnChanges {
         }
         return;
       } catch {
-        // ignore invalid GeoJSON
+        // Ignore invalid route geometry. Do not draw a straight-line fallback.
       }
     }
 
