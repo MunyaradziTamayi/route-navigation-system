@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, map, of } from 'rxjs';
 import { API_ENDPOINTS } from './api.config';
@@ -12,8 +12,8 @@ export type GeocodeResult = {
 type GeocodeItem = {
   displayName?: string;
   display_name?: string;
-  lat: string;
-  lon: string;
+  lat: string | number;
+  lon: string | number;
 };
 
 const ZIMBABWE_BOUNDS = {
@@ -31,17 +31,8 @@ export class GeocodingService {
     const q = query.trim();
     if (q.length < 3) return of<GeocodeResult[]>([]);
 
-    const params = new HttpParams()
-      .set('q', `${q}, Zimbabwe`)
-      .set('countrycodes', 'zw')
-      .set('viewbox', '25,-15.5,33.2,-22.5')
-      .set('bounded', '1')
-      .set('addressdetails', '1')
-      .set('dedupe', '1')
-      .set('limit', '10');
-
     return this.http
-      .get<GeocodeItem[]>(API_ENDPOINTS.geocode(), { params })
+      .get<GeocodeItem[]>(API_ENDPOINTS.geocode(), { params: { q: `${q}, Zimbabwe` } })
       .pipe(
         map((items) =>
           (items ?? [])

@@ -226,23 +226,50 @@
       </header>
 
 
-      <section class="worker-import-card">
-        <div>
-          <h2>Import workers</h2>
-          <p>Upload an Excel file with Staff Number and Name columns.</p>
-        </div>
-        <div class="field">
-          <label for="workerImportFile">Worker Excel file</label>
-          <input id="workerImportFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onWorkerImportFileSelected($event)">
-        </div>
-        <div class="mileage-upload-card__selected" *ngIf="workerImportFile() as file">
-          <span>{{ file.name }}</span>
-          <small>{{ (file.size / 1024).toFixed(1) }} KB</small>
-        </div>
-        <button class="workers-add app-primary-action" type="button" [disabled]="!workerImportFile() || isWorkerImporting()" (click)="uploadWorkersExcel()">
-          {{ isWorkerImporting() ? 'Importing...' : 'Import workers' }}
+      <div class="mileage-upload-toolbar">
+        <button class="workers-add app-primary-action" type="button" (click)="openWorkerImport()">
+          Upload workers
         </button>
-      </section>
+      </div>
+
+      <div class="visit-dialog-backdrop" *ngIf="isWorkerImportOpen()">
+        <section class="visit-dialog mileage-upload-dialog">
+          <div class="visit-dialog__header">
+            <h2>Import workers</h2>
+            <button type="button" aria-label="Close worker import" [disabled]="isWorkerImporting()" (click)="closeWorkerImport()">x</button>
+          </div>
+
+          <div class="mileage-upload-card__intro">
+            <p>Upload an Excel file with Staff Number and Name columns.</p>
+          </div>
+
+          <div class="field mileage-upload-card__field">
+            <label for="workerImportFile">Worker Excel file</label>
+            <input
+              id="workerImportFile"
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              (change)="onWorkerImportFileSelected($event)"
+            >
+          </div>
+
+          <div class="mileage-upload-card__selected" *ngIf="workerImportFile() as file">
+            <span>{{ file.name }}</span>
+            <small>{{ (file.size / 1024).toFixed(1) }} KB</small>
+          </div>
+
+          <div class="form-message" *ngIf="workerFormMessage()">
+            {{ workerFormMessage() }}
+          </div>
+
+          <div class="visit-dialog__actions">
+            <button class="visit-form__cancel" type="button" [disabled]="isWorkerImporting()" (click)="closeWorkerImport()">Cancel</button>
+            <button class="workers-add app-primary-action" type="button" [disabled]="!workerImportFile() || isWorkerImporting()" (click)="uploadWorkersExcel()">
+              {{ isWorkerImporting() ? 'Importing...' : 'Import workers' }}
+            </button>
+          </div>
+        </section>
+      </div>
       <section class="worker-form" *ngIf="isWorkerFormOpen()">
         <div class="worker-form__title">{{ editingWorkerId() ? 'Edit worker' : 'Add worker' }}</div>
         <div class="worker-form__grid">
@@ -438,10 +465,11 @@
       <section class="mileage-result" *ngIf="selectedMileageReport() as report">
         <div class="mileage-result__header">
           <div>
-            <h2>{{ report.fileName || 'Mileage report' }}</h2>
-            <p>{{ report.reportMonth }} - {{ filteredSelectedMileageRows().length }} staff member{{ filteredSelectedMileageRows().length === 1 ? '' : 's' }} - {{ report.createdAt | date: 'medium' }}</p>
+            <h2>{{ formatMileageReportTitle(report) }}</h2>
+            <p>{{ report.reportMonth }} - {{ filteredSelectedMileageRows().length }} staff member{{ filteredSelectedMileageRows().length === 1 ? '' : 's' }}{{ report.reportCount ? ' - ' + report.reportCount + ' report' + (report.reportCount === 1 ? '' : 's') : '' }}<ng-container *ngIf="report.createdAt"> - {{ report.createdAt | date: 'medium' }}</ng-container></p>
           </div>
           <button
+            *ngIf="report.id != null"
             class="mileage-result__download"
             type="button"
             [disabled]="isMileageDownloading()"
@@ -461,25 +489,20 @@
           <article class="stat-card">
             <div class="stat-card__label">Driving mileage</div>
             <div class="stat-card__value">{{ selectedMileageTotal().toFixed(2) }}</div>
-            <div class="stat-card__meta">from uploaded visits</div>
-          </article>
-          <article class="stat-card">
-            <div class="stat-card__label">Straight-line mileage</div>
-            <div class="stat-card__value">{{ selectedStraightLineMileageTotal().toFixed(2) }}</div>
-            <div class="stat-card__meta">direct distance</div>
+            <div class="stat-card__meta">miles from uploaded visits</div>
           </article>
         </div>
 
         <div class="mileage-table" *ngIf="filteredSelectedMileageRows().length > 0">
           <div class="mileage-table__head">
+            <div>Month</div>
             <div>Staff number</div>
             <div>Driving mileage</div>
-            <div>Straight-line mileage</div>
           </div>
           <div class="mileage-table__row" *ngFor="let row of filteredSelectedMileageRows()">
+            <div>{{ formatMileageReportMonth(report) }}</div>
             <div>{{ row.staffNumber }}</div>
-            <div>{{ formatMileageValue(row.totalMileage) }}</div>
-            <div>{{ formatMileageValue(row.totalStraightLineMileage) }}</div>
+            <div>{{ formatMileageRowValue(row) }}</div>
           </div>
         </div>
 
@@ -510,10 +533,10 @@
             class="mileage-history__item"
             type="button"
             *ngFor="let report of filteredMileageReports()"
-            [class.is-selected]="selectedMileageReport()?.id === report.id"
+            [class.is-selected]="isSelectedMileageReport(report)"
             (click)="viewMileageReport(report)"
           >
-            <span>{{ report.fileName || ('Mileage ' + report.reportMonth) }}</span>
+            <span>{{ report.fileName || formatMileageReportMonth(report) }}</span>
             <small>{{ report.reportMonth }} - {{ report.rows.length }} rows</small>
           </button>
         </div>
@@ -813,6 +836,17 @@
         </div>
 
         <div class="form-message" *ngIf="settingsMessage()">{{ settingsMessage() }}</div>
+      </section>
+
+      <section class="settings-card settings-card--danger">
+        <div>
+          <h2>Reset database</h2>
+          <p>Clear workers, visits, mileage uploads, and reports so you can start afresh.</p>
+        </div>
+
+        <button class="workers-add settings-reset" type="button" [disabled]="isDatabaseResetting()" (click)="resetDatabase()">
+          {{ isDatabaseResetting() ? 'Resetting...' : 'Reset database' }}
+        </button>
       </section>
     </section>
 

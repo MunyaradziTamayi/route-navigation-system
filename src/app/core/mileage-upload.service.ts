@@ -5,8 +5,12 @@ import { API_ENDPOINTS } from './api.config';
 
 export type WorkerMileageReportRow = {
   staffNumber: string;
-  totalMileage: number;
-  totalStraightLineMileage: number;
+  totalMileage?: number;
+  totalMileageKm?: number;
+  totalMileageMiles?: number;
+  totalStraightLineMileage?: number;
+  totalStraightLineMileageKm?: number;
+  totalStraightLineMileageMiles?: number;
 };
 
 export type WorkerMileageVisit = {
@@ -22,11 +26,14 @@ export type WorkerMileageVisit = {
 };
 
 export type WorkerMileageReport = {
-  id: number | string;
+  id?: number | string;
   reportMonth: string;
-  fileName: string;
-  downloadUrl: string;
-  createdAt: string;
+  label?: string;
+  totalMileageMiles?: number;
+  reportCount?: number;
+  fileName?: string;
+  downloadUrl?: string;
+  createdAt?: string;
   rows: WorkerMileageReportRow[];
   visits?: WorkerMileageVisit[];
 };
@@ -73,7 +80,7 @@ export class MileageUploadService {
     if (month) params = params.set('month', month);
     if (year) params = params.set('year', year);
 
-    return this.http.get<WorkerMileageReport[]>(API_ENDPOINTS.mileageReports(), { params });
+    return this.http.get<WorkerMileageReport[]>(API_ENDPOINTS.mileageTotals(), { params });
   }
 
   getReport(id: string | number) {

@@ -2,6 +2,7 @@
 import { Component, computed, effect, inject, signal, type WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { AdminService } from './core/admin.service';
 import { GeocodingService, type GeocodeResult } from './core/geocoding.service';
 import { MileageUploadService, type WorkerMileageReport, type WorkerMileageVisit } from './core/mileage-upload.service';
 import { RouteService, type RouteRequest, type RouteResponse } from './core/route.service';
@@ -89,6 +90,7 @@ export class App {
   private readonly visitsApi = inject(VisitService);
   private readonly workersApi = inject(WorkerService);
   private readonly mileageUploadApi = inject(MileageUploadService);
+  private readonly adminApi = inject(AdminService);
 
   readonly form = new FormGroup({
     origin: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -129,6 +131,7 @@ export class App {
   readonly editingWorkerId = signal<string | null>(null);
   readonly workerFormMessage = signal<string | null>(null);
   readonly workerImportFile = signal<File | null>(null);
+  readonly isWorkerImportOpen = signal(false);
   readonly isWorkerImporting = signal(false);
   readonly mileageFile = signal<File | null>(null);
   readonly isMileageUploadOpen = signal(false);
@@ -177,6 +180,7 @@ export class App {
   readonly settingsStartSelected = signal<GeocodeResult | null>(this.loadSettingsStartLocation());
   readonly settingsStartAddressSuggestions = signal<GeocodeResult[]>([]);
   readonly settingsMessage = signal<string | null>(null);
+  readonly isDatabaseResetting = signal(false);
   readonly todaySchedules = computed(() => {
     const today = new Date().toDateString();
     return this.schedules().filter((item) => new Date(item.assignedAt).toDateString() === today);
@@ -382,23 +386,15 @@ export class App {
   });
 
   readonly uploadedMileageTotal = computed(() =>
-    this.mileageReports().reduce(
-      (total, report) =>
-        total + (report.rows ?? []).reduce((sum, row) => sum + Number(row.totalMileage ?? 0), 0),
-      0
-    )
+    this.mileageReports().find((report) => report.reportMonth === 'all')?.totalMileageMiles ??
+    this.mileageReports()
+      .filter((report) => report.reportMonth !== 'all')
+      .reduce((total, report) => total + Number(report.totalMileageMiles ?? 0), 0)
   );
 
   readonly selectedMileageTotal = computed(() =>
     this.filteredSelectedMileageRows().reduce(
-      (total, row) => total + Number(row.totalMileage ?? 0),
-      0
-    )
-  );
-
-  readonly selectedStraightLineMileageTotal = computed(() =>
-    this.filteredSelectedMileageRows().reduce(
-      (total, row) => total + Number(row.totalStraightLineMileage ?? 0),
+      (total, row) => total + this.mileageValue(row),
       0
     )
   );
@@ -567,8 +563,8 @@ export class App {
 
           const current = this.selectedMileageReport();
           const selected =
-            rows.find((report) => String(report.id) === String(selectedReportId)) ??
-            (current ? rows.find((report) => String(report.id) === String(current.id)) : null) ??
+            rows.find((report) => this.sameMileageReport(report, selectedReportId)) ??
+            (current ? rows.find((report) => this.sameMileageReport(report, current)) : null) ??
             rows[0] ??
             null;
           this.selectedMileageReport.set(selected);
@@ -895,10 +891,42 @@ export class App {
     this.showSuccess(this.settingsMessage, 'Starting address saved.');
   }
 
+  async resetDatabase() {
+    const confirmed = globalThis.confirm?.(
+      'This will clear workers, visits, mileage uploads, and reports from the database. Continue?'
+    );
+    if (!confirmed) return;
+
+    this.isDatabaseResetting.set(true);
+    this.settingsMessage.set('Resetting database...');
+
+    try {
+      await this.adminApi.resetDatabase();
+      this.clearFrontendData();
+      this.showSuccess(this.settingsMessage, 'Database reset complete. You can start afresh.');
+    } catch {
+      this.showError(this.settingsMessage, 'Failed to reset the database.');
+    } finally {
+      this.isDatabaseResetting.set(false);
+    }
+  }
+
 
   onWorkerImportFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     this.workerImportFile.set(input.files?.[0] ?? null);
+    this.workerFormMessage.set(null);
+  }
+
+  openWorkerImport() {
+    this.isWorkerImportOpen.set(true);
+    this.workerFormMessage.set(null);
+  }
+
+  closeWorkerImport() {
+    if (this.isWorkerImporting()) return;
+    this.isWorkerImportOpen.set(false);
+    this.workerImportFile.set(null);
     this.workerFormMessage.set(null);
   }
 
@@ -913,6 +941,7 @@ export class App {
     try {
       const imported = await this.workersApi.uploadWorkers(file);
       this.workerImportFile.set(null);
+      this.isWorkerImportOpen.set(false);
       this.refreshWorkers();
       this.showSuccess(this.workerFormMessage, `${imported.length} worker${imported.length === 1 ? '' : 's'} imported.`);
     } catch {
@@ -1066,7 +1095,7 @@ export class App {
       });
       const report = this.preferredMileageReport(reports);
       this.selectedMileageReport.set(report);
-      this.refreshMileageReports(report?.id);
+      this.refreshMileageReports(report?.id ?? report?.reportMonth);
       this.isMileageUploadOpen.set(false);
       this.mileageFile.set(null);
       this.showSuccess(this.mileageUploadMessage, this.mileageUploadSuccessMessage(reports));
@@ -1079,6 +1108,12 @@ export class App {
   }
 
   viewMileageReport(report: WorkerMileageReport) {
+    if (report.id == null) {
+      this.selectedMileageReport.set(report);
+      this.mileageUploadMessage.set(null);
+      return;
+    }
+
     this.mileageUploadApi.getReport(report.id).subscribe({
       next: (freshReport) => {
         this.selectedMileageReport.set(freshReport);
@@ -1091,6 +1126,10 @@ export class App {
   async downloadMileageReport(report = this.selectedMileageReport()) {
     if (!report) {
       this.showError(this.mileageUploadMessage, 'Choose a mileage report to download.');
+      return;
+    }
+    if (report.id == null) {
+      this.showError(this.mileageUploadMessage, 'This mileage total does not have a downloadable workbook.');
       return;
     }
 
@@ -1460,6 +1499,24 @@ export class App {
     return Number(value ?? 0).toFixed(2);
   }
 
+  formatMileageReportMonth(report: WorkerMileageReport): string {
+    if (report.reportMonth === 'all') return 'All';
+    return report.label || report.reportMonth || 'Not set';
+  }
+
+  formatMileageReportTitle(report: WorkerMileageReport): string {
+    return report.fileName || report.label || this.formatMileageReportMonth(report);
+  }
+
+  formatMileageRowValue(row: { totalMileageMiles?: number; totalMileage?: number }): string {
+    return this.formatMileageValue(this.mileageValue(row));
+  }
+
+  isSelectedMileageReport(report: WorkerMileageReport): boolean {
+    const selected = this.selectedMileageReport();
+    return selected ? this.sameMileageReport(report, selected) : false;
+  }
+
 
   workerNameByStaffNumber(staffNumber: string): string {
     return this.workers().find((worker) => worker.staffNumber === staffNumber)?.name ?? '';
@@ -1490,6 +1547,19 @@ export class App {
     return [...(reports ?? [])].sort((a, b) =>
       String(b.reportMonth ?? '').localeCompare(String(a.reportMonth ?? ''))
     )[0] ?? null;
+  }
+
+  private mileageValue(row: { totalMileageMiles?: number; totalMileage?: number }): number {
+    return Number(row.totalMileageMiles ?? row.totalMileage ?? 0);
+  }
+
+  private sameMileageReport(report: WorkerMileageReport, target: WorkerMileageReport | string | number | undefined): boolean {
+    if (target == null) return false;
+    if (typeof target === 'object') {
+      if (report.id != null && target.id != null) return String(report.id) === String(target.id);
+      return String(report.reportMonth ?? '') === String(target.reportMonth ?? '');
+    }
+    return String(report.id ?? report.reportMonth ?? '') === String(target);
   }
 
   private mileageUploadSuccessMessage(reports: WorkerMileageReport[]): string {
@@ -1659,6 +1729,28 @@ export class App {
     this.workerHomeAddressControl.setValue('');
     this.workerAddressSuggestions.set([]);
     this.workerFormMessage.set(null);
+  }
+
+  private clearFrontendData() {
+    this.workers.set([]);
+    this.schedules.set([]);
+    this.mileageReports.set([]);
+    this.selectedMileageReport.set(null);
+    this.selectedWorkerMileageWorker.set(null);
+    this.selectedWorkerMileageVisits.set([]);
+    this.pendingScheduleVisit.set(null);
+    this.workerImportFile.set(null);
+    this.mileageFile.set(null);
+    this.isWorkerImportOpen.set(false);
+    this.isMileageUploadOpen.set(false);
+    this.resetWorkerForm();
+    this.resetScheduleForm();
+    this.settingsStartAddressControl.setValue('', { emitEvent: false });
+    this.settingsStartAddress.set('');
+    this.settingsStartSelected.set(null);
+    this.settingsStartAddressSuggestions.set([]);
+    this.useSettingsOrigin.set(false);
+    globalThis.localStorage?.removeItem(SETTINGS_STORAGE_KEY);
   }
 
   private syncWorkerSelections() {

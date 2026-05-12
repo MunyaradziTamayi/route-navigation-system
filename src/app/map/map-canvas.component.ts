@@ -45,7 +45,7 @@ export class MapCanvasComponent implements AfterViewInit, OnChanges {
 
     this.leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '© OpenStreetMap'
+      attribution: '&copy; OpenStreetMap'
     }).addTo(this.map);
 
     this.markersLayer = this.leaflet.layerGroup().addTo(this.map);

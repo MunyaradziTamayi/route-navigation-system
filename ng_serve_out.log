@@ -5,50 +5,13 @@
 [33m>[39m Building...
 [32m√[39m Building...
 [1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m [1mRaw size[22m
-[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m[36m201.34 kB[39m[2m | [22m
-[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m [36m22.59 kB[39m[2m | [22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m[36m271.26 kB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m [36m30.33 kB[39m[2m | [22m
 
-[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m[1m223.93 kB[22m
+[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m[1m301.59 kB[22m
 
-Application bundle generation complete. [4.108 seconds] - 2026-05-10T06:22:21.303Z
+Application bundle generation complete. [6.350 seconds] - 2026-05-12T07:01:41.298Z
 
 Watch mode enabled. Watching for file changes...
 NOTE: Raw file sizes do not reflect development server per-request transformations.
   [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m4200[22m/[39m
-[33m>[39m Changes detected. Rebuilding...
-[32m√[39m Changes detected. Rebuilding...
-[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m [1mRaw size[22m
-[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m[36m203.02 kB[39m[2m | [22m
-
-Application bundle generation complete. [6.299 seconds] - 2026-05-10T07:00:53.438Z
-
-Page reload sent to client(s).
-[33m>[39m Changes detected. Rebuilding...
-[32m√[39m Changes detected. Rebuilding...
-[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m [1mRaw size[22m
-[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m[36m203.02 kB[39m[2m | [22m
-[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m [36m22.59 kB[39m[2m | [22m
-
-[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m[1m225.62 kB[22m
-
-Application bundle generation complete. [1.535 seconds] - 2026-05-10T07:00:55.003Z
-
-[33m>[39m Changes detected. Rebuilding...
-[32m√[39m Changes detected. Rebuilding...
-[1mInitial chunk files[22m[2m | [22m[1mNames[22m[2m | [22m [1mRaw size[22m
-[32mmain.js[39m            [2m | [22m[2mmain[22m [2m | [22m[36m201.36 kB[39m[2m | [22m
-
-Application bundle generation complete. [4.623 seconds] - 2026-05-10T07:03:49.253Z
-
-Page reload sent to client(s).
-[33m>[39m Changes detected. Rebuilding...
-[32m√[39m Changes detected. Rebuilding...
-[1mInitial chunk files[22m[2m | [22m[1mNames[22m        [2m | [22m [1mRaw size[22m
-[32mmain.js[39m            [2m | [22m[2mmain[22m         [2m | [22m[36m201.36 kB[39m[2m | [22m
-[32mstyles.css[39m         [2m | [22m[2mstyles[22m       [2m | [22m [36m22.59 kB[39m[2m | [22m
-
-[1m [22m                  [2m | [22m[1mInitial total[22m[2m | [22m[1m223.95 kB[22m
-
-Application bundle generation complete. [5.412 seconds] - 2026-05-10T07:03:54.690Z
-
-Component update sent to client(s).

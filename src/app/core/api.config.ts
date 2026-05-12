@@ -19,12 +19,14 @@ export const API_ENDPOINTS = {
   visit: (id: string) => `${getApiBaseUrl()}/api/visits/${encodeURIComponent(id)}`,
   mileageUpload: () => `${getApiBaseUrl()}/api/mileage/upload`,
   mileageReports: () => `${getApiBaseUrl()}/api/mileage/reports`,
+  mileageTotals: () => `${getApiBaseUrl()}/api/mileage/totals`,
   mileageReport: (id: string | number) => `${getApiBaseUrl()}/api/mileage/reports/${encodeURIComponent(String(id))}`,
   mileageReportDownload: (id: string | number) => `${getApiBaseUrl()}/api/mileage/reports/${encodeURIComponent(String(id))}/download`,
   workerMileageVisits: (staffNumber: string) => `${getApiBaseUrl()}/api/mileage/visits/staff/${encodeURIComponent(staffNumber)}`,
   workers: () => `${getApiBaseUrl()}/api/workers`,
   workerUpload: () => `${getApiBaseUrl()}/api/workers/upload`,
-  worker: (id: string | number) => `${getApiBaseUrl()}/api/workers/${encodeURIComponent(String(id))}`
+  worker: (id: string | number) => `${getApiBaseUrl()}/api/workers/${encodeURIComponent(String(id))}`,
+  resetDatabase: () => `${getApiBaseUrl()}/api/admin/reset`
 };
 
 

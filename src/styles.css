@@ -1133,6 +1133,36 @@ body {
   font-size: 14px;
 }
 
+.settings-card--danger {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  border-color: #f0b7b2;
+  background: #fffafa;
+}
+
+.settings-card--danger h2 {
+  margin: 0;
+  color: #7a2018;
+  font-size: 17px;
+}
+
+.settings-card--danger p {
+  margin: 7px 0 0;
+  color: #7f3d37;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-reset {
+  justify-self: start;
+  background: #b42318;
+}
+
+.settings-reset:hover:not(:disabled) {
+  background: #931b13;
+}
+
 .mileage-upload-card {
   max-width: 780px;
   display: grid;
