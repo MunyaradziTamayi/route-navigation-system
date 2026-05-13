@@ -1,11 +1,17 @@
-﻿<div class="care-app" [class.is-nav-collapsed]="isSidebarCollapsed()">
+<app-login
+  *ngIf="!isAuthenticated()"
+  (loginSuccess)="onLoginSuccess($event)"
+></app-login>
+
+<div class="care-app" *ngIf="isAuthenticated()" [class.is-nav-collapsed]="isSidebarCollapsed()">
   <div
     class="app-notice"
     *ngIf="notice() as currentNotice"
     [class.app-notice--success]="currentNotice.type === 'success'"
     [class.app-notice--error]="currentNotice.type === 'error'"
-    role="status"
-    aria-live="polite"
+    [class.app-notice--compact]="currentNotice.message.startsWith('Welcome,')"
+    [attr.role]="currentNotice.type === 'error' ? 'alert' : 'status'"
+    [attr.aria-live]="currentNotice.type === 'error' ? 'assertive' : 'polite'"
   >
     <div class="app-notice__icon" aria-hidden="true">
       <svg *ngIf="currentNotice.type === 'success'" viewBox="0 0 24 24">
@@ -17,8 +23,18 @@
         <path d="M10.3 4.1 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 4.1a2 2 0 0 0-3.4 0Z"/>
       </svg>
     </div>
-    <div class="app-notice__message">{{ currentNotice.message }}</div>
-    <button type="button" aria-label="Dismiss message" (click)="dismissNotice()">x</button>
+    <div class="app-notice__content">
+      <div class="app-notice__title" *ngIf="!currentNotice.message.startsWith('Welcome,')">
+        {{ currentNotice.type === 'success' ? 'Success' : 'Action needed' }}
+      </div>
+      <div class="app-notice__message">{{ currentNotice.message }}</div>
+    </div>
+    <button class="app-notice__close" type="button" aria-label="Dismiss message" (click)="dismissNotice()">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M18 6 6 18"/>
+        <path d="m6 6 12 12"/>
+      </svg>
+    </button>
   </div>
 
   <aside class="care-sidebar">
@@ -34,9 +50,16 @@
     </button>
 
     <div class="care-brand">
+      <img
+        class="care-brand__logo"
+        src="/connected-health-logo.svg"
+        alt="Connected Health logo"
+      >
       <div class="care-brand__copy">
-        <div class="care-brand__title">CareRoute</div>
-        <div class="care-brand__subtitle">Mileage calculator</div>
+        <div class="care-brand__title">Connected Health</div>
+        <div class="care-brand__subtitle">
+          <span class="typewriter-text" style="--typewriter-characters: 24;">DormCare Route Optimizer</span>
+        </div>
       </div>
     </div>
 
@@ -83,7 +106,7 @@
         <span class="care-nav__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-3 3 2 5-6"/><path d="M16 8h3v3"/></svg>
         </span>
-        <span class="care-nav__label">Worker Mileage Optimizer</span>
+        <span class="care-nav__label">Worker Mileage Optimizerr</span>
       </button>
       <button
         class="care-nav__item"
@@ -833,8 +856,9 @@
           <div>{{ report.rows.length }}</div>
           <div>{{ reportMileageTotal(report).toFixed(2) }}</div>
           <div class="workers-table__actions">
-            <button type="button" aria-label="Download uploaded mileage report" title="Download report" (click)="downloadMileageReport(report)">
+            <button class="report-download-button" type="button" aria-label="Download uploaded mileage report" title="Download report" (click)="downloadMileageReport(report)">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              <span>Download</span>
             </button>
           </div>
         </div>
@@ -893,12 +917,34 @@
           <p>Clear workers, visits, mileage uploads, and reports so you can start afresh.</p>
         </div>
 
-        <button class="workers-add settings-reset" type="button" [disabled]="isDatabaseResetting()" (click)="resetDatabase()">
+        <button class="workers-add settings-reset" type="button" [disabled]="isDatabaseResetting()" (click)="openResetConfirm()">
           {{ isDatabaseResetting() ? 'Resetting...' : 'Reset database' }}
         </button>
 
         <div class="form-message" *ngIf="settingsMessage()">{{ settingsMessage() }}</div>
       </section>
+
+      <div class="confirm-dialog-backdrop" *ngIf="isResetConfirmOpen()" (click)="closeResetConfirm()">
+        <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="resetConfirmTitle" (click)="$event.stopPropagation()">
+          <div class="confirm-dialog__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 8v5"/>
+              <path d="M12 17h.01"/>
+              <path d="M10.3 4.1 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 4.1a2 2 0 0 0-3.4 0Z"/>
+            </svg>
+          </div>
+          <div class="confirm-dialog__content">
+            <h2 id="resetConfirmTitle">Reset database?</h2>
+            <p>This will clear workers, visits, mileage uploads, and reports from the database. This action cannot be undone.</p>
+          </div>
+          <div class="confirm-dialog__actions">
+            <button class="confirm-dialog__cancel" type="button" [disabled]="isDatabaseResetting()" (click)="closeResetConfirm()">Cancel</button>
+            <button class="confirm-dialog__confirm" type="button" [disabled]="isDatabaseResetting()" (click)="confirmResetDatabase()">
+              {{ isDatabaseResetting() ? 'Resetting...' : 'Confirm reset' }}
+            </button>
+          </div>
+        </section>
+      </div>
     </section>
 
     <section class="route-view" *ngIf="activePage() === 'route'">
@@ -1120,4 +1166,35 @@
       </div>
     </section>
   </main>
+
+  <section
+    class="profile-menu"
+    *ngIf="authenticatedUser() as user"
+    [class.profile-menu--nav-collapsed]="isSidebarCollapsed()"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="profile-menu__panel" *ngIf="isProfileMenuOpen()">
+      <div>
+        <strong>{{ user.name }}</strong>
+        <span>{{ user.email }}</span>
+      </div>
+      <button type="button" (click)="logout()">Log out</button>
+    </div>
+
+    <button
+      class="profile-menu__trigger"
+      type="button"
+      [attr.aria-expanded]="isProfileMenuOpen()"
+      aria-label="Open profile menu"
+      (click)="toggleProfileMenu()"
+    >
+      <span class="profile-menu__avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M5 20c1.4-3.6 4-5.4 7-5.4s5.6 1.8 7 5.4"/>
+        </svg>
+      </span>
+      <span class="profile-menu__name">{{ user.name }}</span>
+    </button>
+  </section>
 </div>

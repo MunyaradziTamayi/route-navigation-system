@@ -1,0 +1,49 @@
+<main class="login-page">
+  <section class="login-panel" aria-labelledby="loginTitle">
+    <div class="login-panel__brand">
+      <img src="/connected-health-logo.svg" alt="Connected Health logo">
+      <div>
+        <p>Connected Health</p>
+        <h1 id="loginTitle">
+          <span class="typewriter-text" style="--typewriter-characters: 24;">DormCare Route Optimizer</span>
+        </h1>
+      </div>
+    </div>
+
+    <div class="login-panel__intro">
+      <h2>{{ mode() === 'login' ? 'Sign in' : 'Create account' }}</h2>
+      <p>{{ mode() === 'login' ? 'Use your registered account to continue.' : 'Register a new account, then continue into the route optimizer.' }}</p>
+    </div>
+
+    <div class="login-tabs" aria-label="Authentication mode">
+      <button type="button" [class.is-active]="mode() === 'login'" (click)="setMode('login')">Login</button>
+      <button type="button" [class.is-active]="mode() === 'register'" (click)="setMode('register')">Register</button>
+    </div>
+
+    <form class="login-form" [formGroup]="loginForm" (ngSubmit)="submitAuth()">
+      <div class="login-field" *ngIf="mode() === 'register'">
+        <label for="loginName">Name</label>
+        <input id="loginName" type="text" autocomplete="name" formControlName="name">
+      </div>
+
+      <div class="login-field">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" autocomplete="username" formControlName="email">
+      </div>
+
+      <div class="login-field">
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" formControlName="password">
+      </div>
+
+      <button class="login-submit" type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Please wait...' : mode() === 'login' ? 'Log in' : 'Create account' }}
+      </button>
+
+      <div class="login-error" *ngIf="loginMessage()" role="alert">
+        {{ loginMessage() }}
+      </div>
+    </form>
+  </section>
+
+</main>

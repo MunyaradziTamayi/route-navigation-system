@@ -1,5 +1,5 @@
 ﻿import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, signal, type WritableSignal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, signal, type WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { AdminService } from './core/admin.service';
@@ -8,6 +8,8 @@ import { MileageUploadService, type WorkerMileageReport, type WorkerMileageUploa
 import { RouteService, type RouteRequest, type RouteResponse } from './core/route.service';
 import { VisitService, type VisitPayload, type VisitResponse } from './core/visit.service';
 import { WorkerService, type WorkerResponse } from './core/worker.service';
+import { LoginComponent } from './auth/login.component';
+import { type AuthUser } from './core/auth.service';
 import { MapCanvasComponent } from './map/map-canvas.component';
 
 type AppPage =
@@ -72,7 +74,7 @@ type AppNotice = {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DatePipe, MapCanvasComponent],
+  imports: [CommonModule, ReactiveFormsModule, DatePipe, LoginComponent, MapCanvasComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -102,6 +104,9 @@ export class App {
   readonly errorMessage = signal<string | null>(null);
   readonly notice = signal<AppNotice | null>(null);
   readonly route = signal<RouteResponse | null>(null);
+  readonly isAuthenticated = signal(false);
+  readonly authenticatedUser = signal<AuthUser | null>(null);
+  readonly isProfileMenuOpen = signal(false);
 
   readonly activePage = signal<AppPage>('dashboard');
   readonly isSidebarCollapsed = signal(false);
@@ -171,6 +176,7 @@ export class App {
   readonly reportSearchControl = new FormControl('', { nonNullable: true });
   readonly settingsMessage = signal<string | null>(null);
   readonly isDatabaseResetting = signal(false);
+  readonly isResetConfirmOpen = signal(false);
   readonly todaySchedules = computed(() => {
     const today = new Date().toDateString();
     return this.schedules().filter((item) => new Date(item.assignedAt).toDateString() === today);
@@ -193,7 +199,7 @@ export class App {
   private readonly mileageFilterStaff = signal('');
   private readonly mileageReportMonth = signal('');
   private readonly mileageReportYear = signal('');
-  private readonly messageDurationMs = 10000;
+  private readonly messageDurationMs = 3000;
   private readonly messageTimers = new Map<WritableSignal<string | null>, ReturnType<typeof setTimeout>>();
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
   private noticeId = 0;
@@ -901,18 +907,24 @@ export class App {
     this.workerAddressSuggestions.set([]);
   }
 
-  async resetDatabase() {
-    const confirmed = globalThis.confirm?.(
-      'This will clear workers, visits, mileage uploads, and reports from the database. Continue?'
-    );
-    if (!confirmed) return;
+  openResetConfirm() {
+    this.settingsMessage.set(null);
+    this.isResetConfirmOpen.set(true);
+  }
 
+  closeResetConfirm() {
+    if (this.isDatabaseResetting()) return;
+    this.isResetConfirmOpen.set(false);
+  }
+
+  async confirmResetDatabase() {
     this.isDatabaseResetting.set(true);
     this.settingsMessage.set('Resetting database...');
 
     try {
       await this.adminApi.resetDatabase();
       this.clearFrontendData();
+      this.isResetConfirmOpen.set(false);
       this.showSuccess(this.settingsMessage, 'Database reset complete. You can start afresh.');
     } catch {
       this.showError(this.settingsMessage, 'Failed to reset the database.');
@@ -1707,6 +1719,42 @@ export class App {
 
   setActivePage(page: AppPage) {
     this.activePage.set(page);
+  }
+
+  onLoginSuccess(user: AuthUser) {
+    this.authenticatedUser.set(user);
+    this.isAuthenticated.set(true);
+    this.showSuccessNotice(`Welcome, ${user.name}`);
+  }
+
+  logout() {
+    this.isAuthenticated.set(false);
+    this.authenticatedUser.set(null);
+    this.isProfileMenuOpen.set(false);
+    this.dismissNotice();
+  }
+
+  toggleProfileMenu() {
+    this.isProfileMenuOpen.update((open) => !open);
+  }
+
+  closeProfileMenu() {
+    this.isProfileMenuOpen.set(false);
+  }
+
+  @HostListener('document:click')
+  closeProfileMenuOnDocumentClick() {
+    if (this.isProfileMenuOpen()) this.closeProfileMenu();
+  }
+
+  profileInitials(): string {
+    const user = this.authenticatedUser();
+    const source = user?.name?.trim() || user?.email?.trim() || 'User';
+    const parts = source.split(/\s+/).filter(Boolean);
+    const initials = parts.length > 1
+      ? `${parts[0][0]}${parts[1][0]}`
+      : source.slice(0, 2);
+    return initials.toUpperCase();
   }
 
   toggleSidebar() {

@@ -11,6 +11,8 @@ export function getApiBaseUrl(): string {
 }
 
 export const API_ENDPOINTS = {
+  login: () => `${getApiBaseUrl()}/api/auth/login`,
+  register: () => `${getApiBaseUrl()}/api/auth/register`,
   computeRoute: () => `${getApiBaseUrl()}/api/routes/compute`,
   geocode: () => `${getApiBaseUrl()}/api/geocode`,
   listJourneys: () => `${getApiBaseUrl()}/api/journeys`,
