@@ -34,6 +34,14 @@ export type VisitResponse = VisitPayload & {
   updatedAt?: string;
 };
 
+type VisitUploadResponse =
+  | VisitResponse[]
+  | {
+      visits?: VisitResponse[];
+      imported?: VisitResponse[];
+      data?: VisitResponse[];
+    };
+
 @Injectable({ providedIn: 'root' })
 export class VisitService {
   private readonly http = inject(HttpClient);
@@ -57,7 +65,11 @@ export class VisitService {
   uploadVisits(file: File): Promise<VisitResponse[]> {
     const body = new FormData();
     body.append('file', file, file.name);
-    return firstValueFrom(this.http.post<VisitResponse[]>(API_ENDPOINTS.visitUpload(), body));
+    return firstValueFrom(this.http.post<VisitUploadResponse>(API_ENDPOINTS.visitUpload(), body))
+      .then((response) => {
+        if (Array.isArray(response)) return response;
+        return response.visits ?? response.imported ?? response.data ?? [];
+      });
   }
 
   assignStaff(): Promise<VisitResponse[]> {

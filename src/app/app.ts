@@ -1636,7 +1636,7 @@ export class App {
         ? (workersOrNames as string[])
         : (workersOrNames as CareWorker[]).map((worker) => worker.name);
 
-    return names.join(', ');
+    return names.join(', ') || 'Unassigned';
   }
 
   formatMiles(distanceKm: number): string {

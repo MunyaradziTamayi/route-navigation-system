@@ -643,7 +643,7 @@
       </div>
 
       <div class="visit-dialog-backdrop" *ngIf="isScheduleUploadOpen()">
-        <form class="visit-dialog" (ngSubmit)="uploadScheduleVisits()">
+        <form class="visit-dialog" (submit)="$event.preventDefault()">
           <div class="visit-dialog__header">
             <div>
               <h2>Upload visits</h2>
@@ -665,7 +665,7 @@
 
           <div class="visit-dialog__actions">
             <button class="visit-form__cancel" type="button" [disabled]="isScheduleUploading()" (click)="closeScheduleUpload()">Cancel</button>
-            <button class="workers-add" type="submit" [disabled]="isScheduleUploading()">
+            <button class="workers-add" type="button" [disabled]="!scheduleUploadFile() || isScheduleUploading()" (click)="uploadScheduleVisits()">
               {{ isScheduleUploading() ? 'Uploading...' : 'Upload visits' }}
             </button>
           </div>
