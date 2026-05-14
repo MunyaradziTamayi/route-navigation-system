@@ -2133,6 +2133,14 @@ body {
     padding-bottom: 14px;
   }
 
+  .care-brand .typewriter-text {
+    display: inline;
+    overflow: visible;
+    border-right: 0;
+    white-space: normal;
+    animation: none;
+  }
+
   .care-nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

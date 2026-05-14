@@ -33,9 +33,14 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.login-panel__brand > div {
+  min-width: 0;
+}
+
 .login-panel__brand img {
   width: 64px;
   height: 74px;
+  flex: 0 0 auto;
   object-fit: contain;
 }
 
@@ -199,5 +204,30 @@
 
   .login-panel {
     padding: 22px;
+  }
+}
+
+@media (max-width: 420px) {
+  .login-panel__brand {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .login-panel__brand img {
+    width: 52px;
+    height: 60px;
+  }
+
+  .login-panel__brand h1 {
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  .typewriter-text {
+    display: inline;
+    overflow: visible;
+    border-right: 0;
+    white-space: normal;
+    animation: none;
   }
 }
