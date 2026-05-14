@@ -1530,6 +1530,9 @@ export class App {
       const imported = await this.visitsApi.uploadVisits(file);
       const mapped = (imported ?? []).map((row) => this.fromVisitResponse(row));
       this.schedules.set([...mapped, ...this.schedules()]);
+      if (mapped[0]) {
+        this.scheduleDateControl.setValue(this.formatDateInput(new Date(mapped[0].assignedAt)));
+      }
       this.isScheduleUploadOpen.set(false);
       this.scheduleUploadFile.set(null);
       this.showSuccess(this.scheduleFormMessage, `${mapped.length} visit${mapped.length === 1 ? '' : 's'} imported. Assign staff when ready.`);
