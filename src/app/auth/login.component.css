@@ -171,15 +171,15 @@
   min-height: 44px;
   border: 0;
   border-radius: 8px;
-  background: #86c443;
-  color: #102033;
+  background: #2fd0ff;
+  color: #061a32;
   font: inherit;
   font-weight: 900;
   cursor: pointer;
 }
 
 .login-submit:hover {
-  background: #78b43a;
+  background: #1fbfe8;
 }
 
 .login-submit:disabled {
