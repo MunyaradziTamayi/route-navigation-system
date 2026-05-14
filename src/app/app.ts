@@ -165,6 +165,7 @@ export class App {
   readonly isScheduleUploadOpen = signal(false);
   readonly isScheduleUploading = signal(false);
   readonly isAssigningScheduleStaff = signal(false);
+  readonly isScheduleDownloading = signal(false);
   readonly scheduleUploadFile = signal<File | null>(null);
   readonly editingScheduleId = signal<string | null>(null);
   readonly scheduleFormMessage = signal<string | null>(null);
@@ -1566,6 +1567,22 @@ export class App {
       this.showError(this.scheduleFormMessage, e?.error?.message ?? e?.error ?? e?.message ?? 'Failed to assign staff.');
     } finally {
       this.isAssigningScheduleStaff.set(false);
+    }
+  }
+
+  async downloadSchedule() {
+    const date = this.scheduleDateControl.value;
+    this.isScheduleDownloading.set(true);
+    this.scheduleFormMessage.set('Preparing schedule workbook...');
+
+    try {
+      const result = await this.visitsApi.downloadSchedule(date);
+      this.downloadBlob(result.blob, result.filename);
+      this.showSuccess(this.scheduleFormMessage, 'Schedule workbook downloaded.');
+    } catch (e: any) {
+      this.showError(this.scheduleFormMessage, e?.error?.message ?? e?.error ?? e?.message ?? 'Failed to download schedule.');
+    } finally {
+      this.isScheduleDownloading.set(false);
     }
   }
 

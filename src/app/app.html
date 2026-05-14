@@ -635,6 +635,9 @@
           <button class="workers-add" type="button" [disabled]="isAssigningScheduleStaff()" (click)="assignScheduleStaff()">
             {{ isAssigningScheduleStaff() ? 'Assigning...' : 'Assign staff' }}
           </button>
+          <button class="workers-add" type="button" [disabled]="isScheduleDownloading()" (click)="downloadSchedule()">
+            {{ isScheduleDownloading() ? 'Downloading...' : 'Download schedule' }}
+          </button>
           <button class="workers-add" type="button" (click)="openScheduleForm()"><span>+</span> Add visit</button>
         </div>
       </div>

@@ -63,4 +63,20 @@ export class VisitService {
   assignStaff(): Promise<VisitResponse[]> {
     return firstValueFrom(this.http.post<VisitResponse[]>(API_ENDPOINTS.assignVisitStaff(), {}));
   }
+
+  downloadSchedule(date?: string): Promise<{ blob: Blob; filename: string }> {
+    return firstValueFrom(this.http.get(API_ENDPOINTS.scheduleDownload(date), {
+      observe: 'response',
+      responseType: 'blob'
+    })).then((response) => ({
+      blob: response.body ?? new Blob(),
+      filename: this.filenameFromDisposition(response.headers.get('content-disposition')) ?? 'visit-schedule.xlsx'
+    }));
+  }
+
+  private filenameFromDisposition(disposition: string | null): string | null {
+    if (!disposition) return null;
+    const match = /filename="?([^"]+)"?/i.exec(disposition);
+    return match?.[1] ?? null;
+  }
 }

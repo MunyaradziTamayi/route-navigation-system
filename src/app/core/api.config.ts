@@ -21,6 +21,10 @@ export const API_ENDPOINTS = {
   visit: (id: string) => `${getApiBaseUrl()}/api/visits/${encodeURIComponent(id)}`,
   visitUpload: () => `${getApiBaseUrl()}/api/visits/upload`,
   assignVisitStaff: () => `${getApiBaseUrl()}/api/visits/assign-staff`,
+  scheduleDownload: (date?: string) => {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return `${getApiBaseUrl()}/api/visits/schedule/download${query}`;
+  },
   mileageUpload: () => `${getApiBaseUrl()}/api/mileage/upload`,
   mileageUploads: () => `${getApiBaseUrl()}/api/mileage/uploads`,
   mileageReports: () => `${getApiBaseUrl()}/api/mileage/reports`,
