@@ -992,6 +992,13 @@ body {
   font-size: 13px;
 }
 
+.visits-heading__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .visits-heading .workers-add {
   min-height: 30px;
   border: 1px solid #c9d4e2;
@@ -1059,6 +1066,12 @@ body {
   line-height: 1.2;
 }
 
+.visit-dialog__header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
 .visit-dialog__header button {
   width: 30px;
   height: 30px;
@@ -1102,6 +1115,11 @@ body {
   background: #ffffff;
   color: #061a32;
   font-size: 14px;
+}
+
+.visit-dialog input[type="file"] {
+  height: auto;
+  padding: 8px;
 }
 
 .visit-dialog__wide {

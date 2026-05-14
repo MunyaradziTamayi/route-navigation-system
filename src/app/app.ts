@@ -156,12 +156,17 @@ export class App {
   readonly scheduleVisitTimeControl = new FormControl('09:00', { nonNullable: true });
   readonly scheduleDurationControl = new FormControl(30, { nonNullable: true });
   readonly scheduleNotesControl = new FormControl('', { nonNullable: true });
+  readonly scheduleUploadOriginControl = new FormControl('', { nonNullable: true });
+  readonly scheduleUploadDurationControl = new FormControl(30, { nonNullable: true });
   readonly scheduleFilterWorkerControl = new FormControl(this.firstWorkerId(), { nonNullable: true });
   readonly scheduleDateControl = new FormControl(this.formatDateInput(this.today), {
     nonNullable: true
   });
   readonly scheduleSearchControl = new FormControl('', { nonNullable: true });
   readonly isScheduleFormOpen = signal(false);
+  readonly isScheduleUploadOpen = signal(false);
+  readonly isScheduleUploading = signal(false);
+  readonly scheduleUploadFile = signal<File | null>(null);
   readonly editingScheduleId = signal<string | null>(null);
   readonly scheduleFormMessage = signal<string | null>(null);
   readonly pendingScheduleVisit = signal<ScheduleAssignment | null>(null);
@@ -1491,6 +1496,72 @@ export class App {
 
   closeScheduleForm() {
     this.resetScheduleForm();
+  }
+
+  openScheduleUpload() {
+    const workerId = this.scheduleFilterWorkerControl.value;
+    const worker = this.workers().find((item) => item.id === workerId);
+    this.selectedScheduleWorkerIds.set(workerId ? [workerId] : this.firstWorkerIdList());
+    this.scheduleUploadOriginControl.setValue(worker?.homeAddress ?? '');
+    this.scheduleUploadDurationControl.setValue(30);
+    this.scheduleUploadFile.set(null);
+    this.scheduleFormMessage.set(null);
+    this.isScheduleUploadOpen.set(true);
+  }
+
+  closeScheduleUpload() {
+    if (this.isScheduleUploading()) return;
+    this.isScheduleUploadOpen.set(false);
+    this.scheduleUploadFile.set(null);
+    this.scheduleUploadOriginControl.setValue('');
+    this.scheduleUploadDurationControl.setValue(30);
+    this.scheduleFormMessage.set(null);
+  }
+
+  onScheduleUploadFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.scheduleUploadFile.set(input.files?.[0] ?? null);
+    this.scheduleFormMessage.set(null);
+  }
+
+  async uploadScheduleVisits() {
+    const file = this.scheduleUploadFile();
+    if (!file) {
+      this.showError(this.scheduleFormMessage, 'Choose an Excel file with Date, Visit Time, and Address columns.');
+      return;
+    }
+
+    const workers = this.selectedWorkers(this.selectedScheduleWorkerIds());
+    if (workers.length === 0) {
+      this.showError(this.scheduleFormMessage, 'Choose at least one worker for the uploaded visits.');
+      return;
+    }
+
+    const originLabel = this.scheduleUploadOriginControl.value.trim();
+    if (!originLabel) {
+      this.showError(this.scheduleFormMessage, 'Enter an origin address for the uploaded visits.');
+      return;
+    }
+
+    this.isScheduleUploading.set(true);
+    this.scheduleFormMessage.set('Importing visits from Excel...');
+    try {
+      const imported = await this.visitsApi.uploadVisits(file, {
+        workerIds: workers.map((worker) => worker.id),
+        workerNames: workers.map((worker) => worker.name),
+        originLabel,
+        durationMinutes: this.normalizedVisitsPerDay(this.scheduleUploadDurationControl.value)
+      });
+      const mapped = (imported ?? []).map((row) => this.fromVisitResponse(row));
+      this.schedules.set([...mapped, ...this.schedules()]);
+      this.isScheduleUploadOpen.set(false);
+      this.scheduleUploadFile.set(null);
+      this.showSuccess(this.scheduleFormMessage, `${mapped.length} visit${mapped.length === 1 ? '' : 's'} imported.`);
+    } catch (e: any) {
+      this.showError(this.scheduleFormMessage, e?.error?.message ?? e?.error ?? e?.message ?? 'Failed to import visits from Excel.');
+    } finally {
+      this.isScheduleUploading.set(false);
+    }
   }
 
   toggleRouteWorker(workerId: string) {

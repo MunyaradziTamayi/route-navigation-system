@@ -58,7 +58,7 @@
       <div class="care-brand__copy">
         <div class="care-brand__title">Connected Health</div>
         <div class="care-brand__subtitle">
-          <span class="typewriter-text" style="--typewriter-characters: 24;">DormCare Route Optimizer</span>
+          <span class="typewriter-text" style="--typewriter-characters: 24;">DormCare Route Optimizerr</span>
         </div>
       </div>
     </div>
@@ -106,7 +106,7 @@
         <span class="care-nav__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-3 3 2 5-6"/><path d="M16 8h3v3"/></svg>
         </span>
-        <span class="care-nav__label">Worker Mileage Optimizerr</span>
+        <span class="care-nav__label">Worker Mileage Optimizer</span>
       </button>
       <button
         class="care-nav__item"
@@ -630,6 +630,65 @@
           <h2>Visits</h2>
           <p>Add visits with their own origin and destination.</p>
         </div>
+        <div class="visits-heading__actions">
+          <button class="workers-add" type="button" (click)="openScheduleUpload()">Upload Excel</button>
+          <button class="workers-add" type="button" (click)="openScheduleForm()"><span>+</span> Add visit</button>
+        </div>
+      </div>
+
+      <div class="visit-dialog-backdrop" *ngIf="isScheduleUploadOpen()">
+        <form class="visit-dialog" (ngSubmit)="uploadScheduleVisits()">
+          <div class="visit-dialog__header">
+            <div>
+              <h2>Upload visits</h2>
+              <p>Date, Visit Time, and Address columns are required.</p>
+            </div>
+            <button type="button" aria-label="Close upload form" (click)="closeScheduleUpload()">x</button>
+          </div>
+
+          <div class="visit-dialog__grid">
+            <div class="field visit-dialog__wide">
+              <label for="scheduleUploadFile">Excel file *</label>
+              <input id="scheduleUploadFile" type="file" accept=".xlsx" (change)="onScheduleUploadFileSelected($event)">
+            </div>
+
+            <div class="field visit-dialog__wide">
+              <label for="scheduleUploadOrigin">Origin address *</label>
+              <input id="scheduleUploadOrigin" type="text" [formControl]="scheduleUploadOriginControl" placeholder="Starting address for all uploaded visits">
+            </div>
+
+            <div class="field">
+              <label for="scheduleUploadDuration">Default duration (minutes)</label>
+              <input id="scheduleUploadDuration" type="number" min="1" step="1" [formControl]="scheduleUploadDurationControl">
+            </div>
+
+            <div class="worker-picker visit-dialog__wide">
+              <label>Assign workers *</label>
+              <div class="worker-picker__grid">
+                <button
+                  class="worker-chip"
+                  type="button"
+                  *ngFor="let worker of workers()"
+                  [class.is-selected]="isScheduleWorkerSelected(worker.id)"
+                  (click)="toggleScheduleWorker(worker.id)"
+                >
+                  {{ worker.name }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-message" *ngIf="scheduleFormMessage()">
+            {{ scheduleFormMessage() }}
+          </div>
+
+          <div class="visit-dialog__actions">
+            <button class="visit-form__cancel" type="button" [disabled]="isScheduleUploading()" (click)="closeScheduleUpload()">Cancel</button>
+            <button class="workers-add" type="submit" [disabled]="isScheduleUploading()">
+              {{ isScheduleUploading() ? 'Uploading...' : 'Upload visits' }}
+            </button>
+          </div>
+        </form>
       </div>
 
       <div class="visit-dialog-backdrop" *ngIf="isScheduleFormOpen()">

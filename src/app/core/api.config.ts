@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   journeyRoute: (id: string) => `${getApiBaseUrl()}/api/journeys/${encodeURIComponent(id)}`,
   visits: () => `${getApiBaseUrl()}/api/visits`,
   visit: (id: string) => `${getApiBaseUrl()}/api/visits/${encodeURIComponent(id)}`,
+  visitUpload: () => `${getApiBaseUrl()}/api/visits/upload`,
   mileageUpload: () => `${getApiBaseUrl()}/api/mileage/upload`,
   mileageUploads: () => `${getApiBaseUrl()}/api/mileage/uploads`,
   mileageReports: () => `${getApiBaseUrl()}/api/mileage/reports`,
