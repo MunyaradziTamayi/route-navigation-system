@@ -1639,6 +1639,16 @@ export class App {
     return names.join(', ') || 'Unassigned';
   }
 
+  workerStaffNumbersLabel(workerIds: string[]): string {
+    if (workerIds.length === 0) return 'Unassigned';
+
+    const staffNumbers = workerIds.map((workerId) =>
+      this.workers().find((worker) => worker.id === workerId)?.staffNumber?.trim() || workerId
+    );
+
+    return staffNumbers.join(', ') || 'Unassigned';
+  }
+
   formatMiles(distanceKm: number): string {
     const milesPerKm = 0.621371;
     return `${(distanceKm * milesPerKm).toFixed(2)} miles`;
