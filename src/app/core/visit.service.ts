@@ -54,18 +54,13 @@ export class VisitService {
     return firstValueFrom(this.http.delete<void>(API_ENDPOINTS.visit(id)));
   }
 
-  uploadVisits(file: File, options: {
-    workerIds: string[];
-    workerNames: string[];
-    originLabel: string;
-    durationMinutes: number;
-  }): Promise<VisitResponse[]> {
+  uploadVisits(file: File): Promise<VisitResponse[]> {
     const body = new FormData();
     body.append('file', file, file.name);
-    body.append('workerIds', JSON.stringify(options.workerIds));
-    body.append('workerNames', JSON.stringify(options.workerNames));
-    body.append('originLabel', options.originLabel);
-    body.append('durationMinutes', String(options.durationMinutes));
     return firstValueFrom(this.http.post<VisitResponse[]>(API_ENDPOINTS.visitUpload(), body));
+  }
+
+  assignStaff(): Promise<VisitResponse[]> {
+    return firstValueFrom(this.http.post<VisitResponse[]>(API_ENDPOINTS.assignVisitStaff(), {}));
   }
 }

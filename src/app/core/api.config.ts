@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
   visits: () => `${getApiBaseUrl()}/api/visits`,
   visit: (id: string) => `${getApiBaseUrl()}/api/visits/${encodeURIComponent(id)}`,
   visitUpload: () => `${getApiBaseUrl()}/api/visits/upload`,
+  assignVisitStaff: () => `${getApiBaseUrl()}/api/visits/assign-staff`,
   mileageUpload: () => `${getApiBaseUrl()}/api/mileage/upload`,
   mileageUploads: () => `${getApiBaseUrl()}/api/mileage/uploads`,
   mileageReports: () => `${getApiBaseUrl()}/api/mileage/reports`,
