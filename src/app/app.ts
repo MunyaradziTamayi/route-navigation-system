@@ -713,14 +713,14 @@ export class App {
   }
 
   selectOrigin(result: GeocodeResult) {
+    this.form.controls.origin.setValue(result.displayName, { emitEvent: false });
     this.originSelected.set(result);
-    this.form.controls.origin.setValue(result.displayName);
     this.originSuggestions.set([]);
   }
 
   selectDestination(result: GeocodeResult) {
+    this.form.controls.destination.setValue(result.displayName, { emitEvent: false });
     this.destinationSelected.set(result);
-    this.form.controls.destination.setValue(result.displayName);
     this.destinationSuggestions.set([]);
   }
 
@@ -891,14 +891,14 @@ export class App {
   }
 
   selectScheduleDestination(result: GeocodeResult) {
+    this.scheduleDestinationControl.setValue(result.displayName, { emitEvent: false });
     this.scheduleDestinationSelected.set(result);
-    this.scheduleDestinationControl.setValue(result.displayName);
     this.scheduleDestinationSuggestions.set([]);
   }
 
   selectScheduleOrigin(result: GeocodeResult) {
+    this.scheduleOriginControl.setValue(result.displayName, { emitEvent: false });
     this.scheduleOriginSelected.set(result);
-    this.scheduleOriginControl.setValue(result.displayName);
     this.scheduleOriginSuggestions.set([]);
   }
 
