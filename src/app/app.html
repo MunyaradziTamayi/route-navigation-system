@@ -610,6 +610,7 @@
         <div class="field">
           <label for="scheduleWorker">Care worker</label>
           <select id="scheduleWorker" [formControl]="scheduleFilterWorkerControl">
+            <option value="">All workers</option>
             <option *ngFor="let worker of workers()" [value]="worker.id">{{ worker.name }}</option>
           </select>
         </div>

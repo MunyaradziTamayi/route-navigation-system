@@ -156,8 +156,8 @@ export class App {
   readonly scheduleVisitTimeControl = new FormControl('09:00', { nonNullable: true });
   readonly scheduleDurationControl = new FormControl(30, { nonNullable: true });
   readonly scheduleNotesControl = new FormControl('', { nonNullable: true });
-  readonly scheduleFilterWorkerControl = new FormControl(this.firstWorkerId(), { nonNullable: true });
-  readonly scheduleDateControl = new FormControl(this.formatDateInput(this.today), {
+  readonly scheduleFilterWorkerControl = new FormControl('', { nonNullable: true });
+  readonly scheduleDateControl = new FormControl('', {
     nonNullable: true
   });
   readonly scheduleSearchControl = new FormControl('', { nonNullable: true });
@@ -194,8 +194,8 @@ export class App {
   private readonly roundTrip = signal(true);
   private readonly unit = signal<'miles' | 'km'>('miles');
   private readonly workerSearch = signal('');
-  private readonly scheduleFilterWorkerId = signal(this.firstWorkerId());
-  private readonly scheduleDate = signal(this.formatDateInput(this.today));
+  private readonly scheduleFilterWorkerId = signal('');
+  private readonly scheduleDate = signal('');
   private readonly scheduleSearch = signal('');
   private readonly reportFromDate = signal(this.formatDateInput(this.today));
   private readonly reportToDate = signal(this.formatDateInput(this.today));
@@ -234,7 +234,7 @@ export class App {
     return this.schedules().filter((item) => {
       const isUnassigned = item.workerIds.length === 0;
       const matchesWorker = isUnassigned || item.workerIds.includes(workerId);
-      const matchesDate = this.formatDateInput(new Date(item.assignedAt)) === date;
+      const matchesDate = !date || this.formatDateInput(new Date(item.assignedAt)) === date;
       const searchable = [
         item.destinationLabel,
         item.originLabel,
@@ -461,7 +461,7 @@ export class App {
 
     this.scheduleFilterWorkerControl.valueChanges.subscribe((v) => {
       this.scheduleFilterWorkerId.set(v);
-      this.selectedScheduleWorkerIds.set([v]);
+      this.selectedScheduleWorkerIds.set(v ? [v] : this.firstWorkerIdList());
     });
 
     this.scheduleDateControl.valueChanges.subscribe((v) => {
@@ -1490,8 +1490,8 @@ export class App {
 
   openScheduleForm() {
     this.resetScheduleForm();
-    const workerId = this.scheduleFilterWorkerControl.value;
-    this.selectedScheduleWorkerIds.set([workerId]);
+    const workerId = this.scheduleFilterWorkerControl.value || this.firstWorkerId();
+    this.selectedScheduleWorkerIds.set(workerId ? [workerId] : []);
     this.isScheduleFormOpen.set(true);
   }
 
@@ -1531,9 +1531,6 @@ export class App {
       const imported = await this.visitsApi.uploadVisits(file);
       const mapped = (imported ?? []).map((row) => this.fromVisitResponse(row));
       this.schedules.set([...mapped, ...this.schedules()]);
-      if (mapped[0]) {
-        this.scheduleDateControl.setValue(this.formatDateInput(new Date(mapped[0].assignedAt)));
-      }
       this.isScheduleUploadOpen.set(false);
       this.scheduleUploadFile.set(null);
       this.showSuccess(this.scheduleFormMessage, `${mapped.length} visit${mapped.length === 1 ? '' : 's'} imported. Assign staff when ready.`);
@@ -2017,8 +2014,8 @@ export class App {
     this.selectedRouteWorkerIds.set(cleanRouteIds.length > 0 ? cleanRouteIds : fallback);
     this.selectedScheduleWorkerIds.set(cleanScheduleIds.length > 0 ? cleanScheduleIds : fallback);
 
-    if (!ids.has(this.scheduleFilterWorkerControl.value)) {
-      this.scheduleFilterWorkerControl.setValue(fallback[0] ?? '');
+    if (this.scheduleFilterWorkerControl.value && !ids.has(this.scheduleFilterWorkerControl.value)) {
+      this.scheduleFilterWorkerControl.setValue('');
     }
 
     if (this.reportWorkerControl.value !== 'all' && !ids.has(this.reportWorkerControl.value)) {
