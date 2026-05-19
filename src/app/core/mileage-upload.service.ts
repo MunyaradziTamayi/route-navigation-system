@@ -11,6 +11,10 @@ export type WorkerMileageReportRow = {
   totalStraightLineMileage?: number;
   totalStraightLineMileageKm?: number;
   totalStraightLineMileageMiles?: number;
+  straightLineMileage?: number;
+  straightLineMileageKm?: number;
+  straightLineMileageMiles?: number;
+  straightlinemileageMiles?: number;
 };
 
 export type WorkerMileageVisit = {
@@ -31,6 +35,7 @@ export type WorkerMileageReport = {
   reportMonth: string;
   label?: string;
   totalMileageMiles?: number;
+  totalStraightLineMileageMiles?: number;
   reportCount?: number;
   fileName?: string;
   downloadUrl?: string;

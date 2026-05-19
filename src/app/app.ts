@@ -1686,6 +1686,10 @@ export class App {
     totalStraightLineMileageMiles?: number;
     totalStraightLineMileageKm?: number;
     totalStraightLineMileage?: number;
+    straightLineMileageMiles?: number;
+    straightLineMileageKm?: number;
+    straightLineMileage?: number;
+    straightlinemileageMiles?: number;
   }): string {
     return this.formatMileageValue(this.straightLineMileageValue(row));
   }
@@ -1775,11 +1779,18 @@ export class App {
     totalStraightLineMileageMiles?: number;
     totalStraightLineMileageKm?: number;
     totalStraightLineMileage?: number;
+    straightLineMileageMiles?: number;
+    straightLineMileageKm?: number;
+    straightLineMileage?: number;
+    straightlinemileageMiles?: number;
   }): number {
     const milesPerKm = 0.621371;
     if (row.totalStraightLineMileageMiles != null) return Number(row.totalStraightLineMileageMiles);
+    if (row.straightLineMileageMiles != null) return Number(row.straightLineMileageMiles);
+    if (row.straightlinemileageMiles != null) return Number(row.straightlinemileageMiles);
     if (row.totalStraightLineMileageKm != null) return Number(row.totalStraightLineMileageKm) * milesPerKm;
-    return Number(row.totalStraightLineMileage ?? 0);
+    if (row.straightLineMileageKm != null) return Number(row.straightLineMileageKm) * milesPerKm;
+    return Number(row.totalStraightLineMileage ?? row.straightLineMileage ?? 0);
   }
 
   private formatGeneratedDate(value?: string): string {
