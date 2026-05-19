@@ -517,6 +517,11 @@
             <div class="stat-card__value">{{ selectedMileageTotal().toFixed(2) }}</div>
             <div class="stat-card__meta">miles from uploaded visits</div>
           </article>
+          <article class="stat-card">
+            <div class="stat-card__label">Straight-line mileage</div>
+            <div class="stat-card__value">{{ selectedStraightLineMileageTotal().toFixed(2) }}</div>
+            <div class="stat-card__meta">direct miles from uploaded visits</div>
+          </article>
         </div>
 
         <div class="mileage-table" *ngIf="filteredSelectedMileageRows().length > 0">
@@ -524,11 +529,13 @@
             <div>Month</div>
             <div>Staff number</div>
             <div>Driving mileage</div>
+            <div>Straight-line mileage</div>
           </div>
           <div class="mileage-table__row" *ngFor="let row of filteredSelectedMileageRows()">
             <div>{{ formatMileageReportMonth(report) }}</div>
             <div>{{ row.staffNumber }}</div>
             <div>{{ formatMileageRowValue(row) }}</div>
+            <div>{{ formatStraightLineMileageRowValue(row) }}</div>
           </div>
         </div>
 
@@ -918,7 +925,8 @@
           <div>Data month</div>
           <div>Generated</div>
           <div>Staff rows</div>
-          <div>Total miles</div>
+          <div>Driving miles</div>
+          <div>Direct miles</div>
           <div></div>
         </div>
         <div class="reports-table__row" *ngFor="let report of uploadedMileageReportRows()">
@@ -926,6 +934,7 @@
           <div>{{ formatMileageReportGeneratedDate(report) }}</div>
           <div>{{ report.rows.length }}</div>
           <div>{{ reportMileageTotal(report).toFixed(2) }}</div>
+          <div>{{ reportStraightLineMileageTotal(report).toFixed(2) }}</div>
           <div class="workers-table__actions">
             <button class="report-download-button" type="button" aria-label="Download uploaded mileage report" title="Download report" (click)="downloadMileageReport(report)">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>

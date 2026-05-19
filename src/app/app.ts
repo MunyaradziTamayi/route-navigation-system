@@ -441,6 +441,13 @@ export class App {
     )
   );
 
+  readonly selectedStraightLineMileageTotal = computed(() =>
+    this.filteredSelectedMileageRows().reduce(
+      (total, row) => total + this.straightLineMileageValue(row),
+      0
+    )
+  );
+
   constructor() {
     const originControl = this.form.controls.origin;
     const destinationControl = this.form.controls.destination;
@@ -1675,6 +1682,14 @@ export class App {
     return this.formatMileageValue(this.mileageValue(row));
   }
 
+  formatStraightLineMileageRowValue(row: {
+    totalStraightLineMileageMiles?: number;
+    totalStraightLineMileageKm?: number;
+    totalStraightLineMileage?: number;
+  }): string {
+    return this.formatMileageValue(this.straightLineMileageValue(row));
+  }
+
   formatMileageReportGeneratedDate(report: WorkerMileageReport): string {
     return this.formatGeneratedDateTime(report.createdAt) || 'Not set';
   }
@@ -1693,6 +1708,22 @@ export class App {
     return (report.rows ?? [])
       .filter((row) => !staffNumber || row.staffNumber.toLowerCase() === staffNumber)
       .reduce((total, row) => total + this.mileageValue(row), 0);
+  }
+
+  reportStraightLineMileageTotal(report: WorkerMileageReport): number {
+    const workerId = this.reportWorkerId();
+    if (workerId === 'all') {
+      return (report.rows ?? []).reduce((total, row) => total + this.straightLineMileageValue(row), 0);
+    }
+
+    const staffNumber = this.workers()
+      .find((worker) => worker.id === workerId)
+      ?.staffNumber?.trim()
+      .toLowerCase();
+
+    return (report.rows ?? [])
+      .filter((row) => !staffNumber || row.staffNumber.toLowerCase() === staffNumber)
+      .reduce((total, row) => total + this.straightLineMileageValue(row), 0);
   }
 
   isSelectedMileageReport(report: WorkerMileageReport): boolean {
@@ -1738,6 +1769,17 @@ export class App {
 
   private mileageValue(row: { totalMileageMiles?: number; totalMileage?: number }): number {
     return Number(row.totalMileageMiles ?? row.totalMileage ?? 0);
+  }
+
+  private straightLineMileageValue(row: {
+    totalStraightLineMileageMiles?: number;
+    totalStraightLineMileageKm?: number;
+    totalStraightLineMileage?: number;
+  }): number {
+    const milesPerKm = 0.621371;
+    if (row.totalStraightLineMileageMiles != null) return Number(row.totalStraightLineMileageMiles);
+    if (row.totalStraightLineMileageKm != null) return Number(row.totalStraightLineMileageKm) * milesPerKm;
+    return Number(row.totalStraightLineMileage ?? 0);
   }
 
   private formatGeneratedDate(value?: string): string {
@@ -1993,9 +2035,13 @@ export class App {
     this.workers.set([]);
     this.schedules.set([]);
     this.mileageReports.set([]);
+    this.downloadableMileageReports.set([]);
+    this.mileageUploads.set([]);
     this.selectedMileageReport.set(null);
+    this.isMileageReportSelectorOpen.set(false);
     this.selectedWorkerMileageWorker.set(null);
     this.selectedWorkerMileageVisits.set([]);
+    this.isWorkerMileageLoading.set(false);
     this.pendingScheduleVisit.set(null);
     this.workerImportFile.set(null);
     this.mileageFile.set(null);
