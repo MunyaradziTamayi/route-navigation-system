@@ -71,6 +71,11 @@ type AppNotice = {
   message: string;
 };
 
+type MileageUploadProgressStep = {
+  label: string;
+  percent: number;
+};
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -85,6 +90,15 @@ export class App {
   private readonly workersApi = inject(WorkerService);
   private readonly mileageUploadApi = inject(MileageUploadService);
   private readonly adminApi = inject(AdminService);
+  readonly mileageUploadProgressSteps: MileageUploadProgressStep[] = [
+    { label: 'Preparing workbook upload', percent: 8 },
+    { label: 'Reading worksheet rows', percent: 24 },
+    { label: 'Validating staff, dates, and addresses', percent: 42 },
+    { label: 'Matching visits to workers', percent: 58 },
+    { label: 'Calculating driving and direct mileage', percent: 76 },
+    { label: 'Building monthly mileage reports', percent: 92 }
+  ];
+  private mileageProgressTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly form = new FormGroup({
     origin: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -132,6 +146,8 @@ export class App {
   readonly mileageFile = signal<File | null>(null);
   readonly isMileageUploadOpen = signal(false);
   readonly isMileageUploading = signal(false);
+  readonly mileageUploadProgress = signal(0);
+  readonly mileageUploadProgressLabel = signal('Ready to calculate');
   readonly mileageUploadMessage = signal<string | null>(null);
   readonly mileageReports = signal<WorkerMileageReport[]>([]);
   readonly downloadableMileageReports = signal<WorkerMileageReport[]>([]);
@@ -401,6 +417,10 @@ export class App {
     this.mileageReports().filter((report) => this.reportMatchesMileageFilters(report))
   );
 
+  readonly downloadableFilteredMileageReports = computed(() =>
+    this.downloadableMileageReports().filter((report) => this.reportMatchesMileageFilters(report))
+  );
+
   readonly filteredSelectedMileageVisits = computed(() =>
     (this.selectedMileageReport()?.visits ?? []).filter((visit) => this.visitMatchesMileageFilters(visit))
   );
@@ -437,13 +457,6 @@ export class App {
   readonly selectedMileageTotal = computed(() =>
     this.filteredSelectedMileageRows().reduce(
       (total, row) => total + this.mileageValue(row),
-      0
-    )
-  );
-
-  readonly selectedStraightLineMileageTotal = computed(() =>
-    this.filteredSelectedMileageRows().reduce(
-      (total, row) => total + this.straightLineMileageValue(row),
       0
     )
   );
@@ -1099,11 +1112,13 @@ export class App {
     const file = input.files?.[0] ?? null;
     this.mileageFile.set(file);
     this.mileageUploadMessage.set(null);
+    this.resetMileageUploadProgress();
   }
 
   openMileageUpload() {
     this.isMileageUploadOpen.set(true);
     this.mileageUploadMessage.set(null);
+    this.resetMileageUploadProgress();
   }
 
   closeMileageUpload() {
@@ -1111,6 +1126,7 @@ export class App {
     this.isMileageUploadOpen.set(false);
     this.mileageFile.set(null);
     this.mileageUploadMessage.set(null);
+    this.resetMileageUploadProgress();
   }
 
   async uploadWorkerMileage() {
@@ -1121,6 +1137,7 @@ export class App {
     }
 
     this.isMileageUploading.set(true);
+    this.startMileageUploadProgress();
     this.mileageUploadMessage.set('Calculating mileage from the uploaded worksheet...');
 
     try {
@@ -1135,6 +1152,8 @@ export class App {
       this.mileageUploads.set([upload, ...this.mileageUploads().filter((row) => String(row.id) !== String(upload.id))]);
       this.downloadableMileageReports.set(reports);
       this.mileageReports.set(totals.length > 0 ? totals : reports);
+      this.completeMileageUploadProgress();
+      await this.wait(450);
       this.isMileageUploadOpen.set(false);
       this.mileageFile.set(null);
       this.showSuccess(this.mileageUploadMessage, this.mileageUploadSuccessMessage(upload));
@@ -1143,6 +1162,7 @@ export class App {
       this.showError(this.mileageUploadMessage, message);
     } finally {
       this.isMileageUploading.set(false);
+      this.stopMileageUploadProgress();
     }
   }
 
@@ -1190,10 +1210,35 @@ export class App {
     this.isMileageDownloading.set(true);
     try {
       const result = await this.mileageUploadApi.downloadReport(report.id);
-      this.downloadBlob(result.blob, result.filename);
+      this.downloadBlob(result.blob, this.mileageWorkbookFilename(report, result.filename));
       this.showSuccess(this.mileageUploadMessage, 'Mileage workbook downloaded.');
     } catch {
       this.showError(this.mileageUploadMessage, 'Failed to download the mileage workbook.');
+    } finally {
+      this.isMileageDownloading.set(false);
+    }
+  }
+
+  async downloadAllMileageReports() {
+    const reports = this.downloadableFilteredMileageReports();
+    if (reports.length === 0) {
+      this.showError(this.mileageUploadMessage, 'No downloadable mileage reports match the current filters.');
+      return;
+    }
+
+    this.isMileageDownloading.set(true);
+    try {
+      for (const report of reports) {
+        if (report.id == null) continue;
+        const result = await this.mileageUploadApi.downloadReport(report.id);
+        this.downloadBlob(result.blob, this.mileageWorkbookFilename(report, result.filename));
+        await this.wait(160);
+      }
+
+      const workbookLabel = reports.length === 1 ? 'workbook' : 'workbooks';
+      this.showSuccess(this.mileageUploadMessage, `${reports.length} mileage ${workbookLabel} downloaded.`);
+    } catch {
+      this.showError(this.mileageUploadMessage, 'Failed to download every mileage workbook.');
     } finally {
       this.isMileageDownloading.set(false);
     }
@@ -1682,18 +1727,6 @@ export class App {
     return this.formatMileageValue(this.mileageValue(row));
   }
 
-  formatStraightLineMileageRowValue(row: {
-    totalStraightLineMileageMiles?: number;
-    totalStraightLineMileageKm?: number;
-    totalStraightLineMileage?: number;
-    straightLineMileageMiles?: number;
-    straightLineMileageKm?: number;
-    straightLineMileage?: number;
-    straightlinemileageMiles?: number;
-  }): string {
-    return this.formatMileageValue(this.straightLineMileageValue(row));
-  }
-
   formatMileageReportGeneratedDate(report: WorkerMileageReport): string {
     return this.formatGeneratedDateTime(report.createdAt) || 'Not set';
   }
@@ -1712,22 +1745,6 @@ export class App {
     return (report.rows ?? [])
       .filter((row) => !staffNumber || row.staffNumber.toLowerCase() === staffNumber)
       .reduce((total, row) => total + this.mileageValue(row), 0);
-  }
-
-  reportStraightLineMileageTotal(report: WorkerMileageReport): number {
-    const workerId = this.reportWorkerId();
-    if (workerId === 'all') {
-      return (report.rows ?? []).reduce((total, row) => total + this.straightLineMileageValue(row), 0);
-    }
-
-    const staffNumber = this.workers()
-      .find((worker) => worker.id === workerId)
-      ?.staffNumber?.trim()
-      .toLowerCase();
-
-    return (report.rows ?? [])
-      .filter((row) => !staffNumber || row.staffNumber.toLowerCase() === staffNumber)
-      .reduce((total, row) => total + this.straightLineMileageValue(row), 0);
   }
 
   isSelectedMileageReport(report: WorkerMileageReport): boolean {
@@ -1773,24 +1790,6 @@ export class App {
 
   private mileageValue(row: { totalMileageMiles?: number; totalMileage?: number }): number {
     return Number(row.totalMileageMiles ?? row.totalMileage ?? 0);
-  }
-
-  private straightLineMileageValue(row: {
-    totalStraightLineMileageMiles?: number;
-    totalStraightLineMileageKm?: number;
-    totalStraightLineMileage?: number;
-    straightLineMileageMiles?: number;
-    straightLineMileageKm?: number;
-    straightLineMileage?: number;
-    straightlinemileageMiles?: number;
-  }): number {
-    const milesPerKm = 0.621371;
-    if (row.totalStraightLineMileageMiles != null) return Number(row.totalStraightLineMileageMiles);
-    if (row.straightLineMileageMiles != null) return Number(row.straightLineMileageMiles);
-    if (row.straightlinemileageMiles != null) return Number(row.straightlinemileageMiles);
-    if (row.totalStraightLineMileageKm != null) return Number(row.totalStraightLineMileageKm) * milesPerKm;
-    if (row.straightLineMileageKm != null) return Number(row.straightLineMileageKm) * milesPerKm;
-    return Number(row.totalStraightLineMileage ?? row.straightLineMileage ?? 0);
   }
 
   private formatGeneratedDate(value?: string): string {
@@ -1844,6 +1843,77 @@ export class App {
       return String(report.reportMonth ?? '') === String(target.reportMonth ?? '');
     }
     return String(report.id ?? report.reportMonth ?? '') === String(target);
+  }
+
+  private startMileageUploadProgress() {
+    this.stopMileageUploadProgress();
+    this.mileageUploadProgress.set(this.mileageUploadProgressSteps[0].percent);
+    this.mileageUploadProgressLabel.set(this.mileageUploadProgressSteps[0].label);
+
+    let stepIndex = 0;
+    this.mileageProgressTimer = setInterval(() => {
+      const current = this.mileageUploadProgress();
+      const nextStep = this.mileageUploadProgressSteps[stepIndex + 1];
+
+      if (nextStep && current >= nextStep.percent - 2) {
+        stepIndex += 1;
+        this.mileageUploadProgressLabel.set(nextStep.label);
+      }
+
+      const ceiling = nextStep?.percent ?? 96;
+      const increment = current < 60 ? 3 : current < 84 ? 2 : 1;
+      this.mileageUploadProgress.set(Math.min(96, ceiling, current + increment));
+    }, 550);
+  }
+
+  private completeMileageUploadProgress() {
+    this.mileageUploadProgress.set(100);
+    this.mileageUploadProgressLabel.set('Mileage report ready');
+  }
+
+  private resetMileageUploadProgress() {
+    this.stopMileageUploadProgress();
+    this.mileageUploadProgress.set(0);
+    this.mileageUploadProgressLabel.set('Ready to calculate');
+  }
+
+  private stopMileageUploadProgress() {
+    if (!this.mileageProgressTimer) return;
+    clearInterval(this.mileageProgressTimer);
+    this.mileageProgressTimer = null;
+  }
+
+  private wait(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  }
+
+  private mileageWorkbookFilename(report: WorkerMileageReport, fallback: string): string {
+    const month = this.reportMonthFilenamePart(report.reportMonth);
+    const extension = this.filenameExtension(fallback) || 'xlsx';
+    return `${month}_worker_mileage.${extension}`;
+  }
+
+  private reportMonthFilenamePart(reportMonth?: string): string {
+    if (!reportMonth || reportMonth === 'all') return 'All';
+
+    const [year, month] = reportMonth.split('-').map((part) => Number(part));
+    if (Number.isFinite(year) && Number.isFinite(month) && month >= 1 && month <= 12) {
+      return new Intl.DateTimeFormat(undefined, { month: 'long' }).format(
+        new Date(year, month - 1, 1)
+      );
+    }
+
+    return (
+      reportMonth
+        .trim()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-zA-Z0-9_-]/g, '') || 'Mileage'
+    );
+  }
+
+  private filenameExtension(filename: string): string | null {
+    const match = /\.([a-zA-Z0-9]+)$/.exec(filename);
+    return match?.[1] ?? null;
   }
 
   private mileageUploadSuccessMessage(upload: WorkerMileageUpload): string {

@@ -455,6 +455,36 @@
             <small>{{ (file.size / 1024).toFixed(1) }} KB</small>
           </div>
 
+          <div
+            class="mileage-progress"
+            *ngIf="isMileageUploading()"
+            role="progressbar"
+            aria-label="Mileage calculation progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            [attr.aria-valuenow]="mileageUploadProgress()"
+          >
+            <div class="mileage-progress__header">
+              <div>
+                <span>Calculation progress</span>
+                <strong>{{ mileageUploadProgressLabel() }}</strong>
+              </div>
+              <b>{{ mileageUploadProgress() }}%</b>
+            </div>
+            <div class="mileage-progress__track">
+              <div class="mileage-progress__bar" [style.width.%]="mileageUploadProgress()"></div>
+            </div>
+            <div class="mileage-progress__steps">
+              <span
+                *ngFor="let step of mileageUploadProgressSteps"
+                [class.is-complete]="mileageUploadProgress() >= step.percent"
+                [class.is-active]="mileageUploadProgressLabel() === step.label && mileageUploadProgress() < 100"
+              >
+                {{ step.label }}
+              </span>
+            </div>
+          </div>
+
           <div class="form-message" *ngIf="mileageUploadMessage()">
             {{ mileageUploadMessage() }}
           </div>
@@ -494,16 +524,28 @@
             <h2>{{ formatMileageReportTitle(report) }}</h2>
             <p>{{ report.reportMonth }} - {{ filteredSelectedMileageRows().length }} staff member{{ filteredSelectedMileageRows().length === 1 ? '' : 's' }}{{ report.reportCount ? ' - ' + report.reportCount + ' report' + (report.reportCount === 1 ? '' : 's') : '' }}<ng-container *ngIf="report.createdAt"> - {{ report.createdAt | date: 'medium' }}</ng-container></p>
           </div>
-          <button
-            *ngIf="report.id != null"
-            class="mileage-result__download"
-            type="button"
-            [disabled]="isMileageDownloading()"
-            (click)="downloadMileageReport(report)"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-            {{ isMileageDownloading() ? 'Downloading...' : 'Download workbook' }}
-          </button>
+          <div class="mileage-result__actions">
+            <button
+              *ngIf="report.id != null"
+              class="mileage-result__download"
+              type="button"
+              [disabled]="isMileageDownloading()"
+              (click)="downloadMileageReport(report)"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              {{ isMileageDownloading() ? 'Downloading...' : 'Download workbook' }}
+            </button>
+            <button
+              *ngIf="report.reportMonth === 'all' && downloadableFilteredMileageReports().length > 0"
+              class="mileage-result__download"
+              type="button"
+              [disabled]="isMileageDownloading()"
+              (click)="downloadAllMileageReports()"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              {{ isMileageDownloading() ? 'Downloading...' : 'Download all workbooks' }}
+            </button>
+          </div>
         </div>
 
         <div class="mileage-summary">
@@ -517,11 +559,6 @@
             <div class="stat-card__value">{{ selectedMileageTotal().toFixed(2) }}</div>
             <div class="stat-card__meta">miles from uploaded visits</div>
           </article>
-          <article class="stat-card">
-            <div class="stat-card__label">Straight-line mileage</div>
-            <div class="stat-card__value">{{ selectedStraightLineMileageTotal().toFixed(2) }}</div>
-            <div class="stat-card__meta">direct miles from uploaded visits</div>
-          </article>
         </div>
 
         <div class="mileage-table" *ngIf="filteredSelectedMileageRows().length > 0">
@@ -529,13 +566,11 @@
             <div>Month</div>
             <div>Staff number</div>
             <div>Driving mileage</div>
-            <div>Straight-line mileage</div>
           </div>
           <div class="mileage-table__row" *ngFor="let row of filteredSelectedMileageRows()">
             <div>{{ formatMileageReportMonth(report) }}</div>
             <div>{{ row.staffNumber }}</div>
             <div>{{ formatMileageRowValue(row) }}</div>
-            <div>{{ formatStraightLineMileageRowValue(row) }}</div>
           </div>
         </div>
 
@@ -569,15 +604,28 @@
             <button type="button" aria-label="Close monthly reports" (click)="closeMileageReportSelector()">x</button>
           </div>
           <div class="mileage-history__list">
-            <button
-              class="mileage-history__item"
-              type="button"
-              [class.is-selected]="selectedMileageReport()?.reportMonth === 'all'"
-              (click)="viewAllMileageReports()"
-            >
-              <span>All reports</span>
-              <small>Combined mileage across selected months</small>
-            </button>
+            <div class="mileage-history__report">
+              <button
+                class="mileage-history__item"
+                type="button"
+                [class.is-selected]="selectedMileageReport()?.reportMonth === 'all'"
+                (click)="viewAllMileageReports()"
+              >
+                <span>All reports</span>
+                <small>Combined mileage across selected months</small>
+              </button>
+              <button
+                class="mileage-history__download"
+                type="button"
+                *ngIf="downloadableFilteredMileageReports().length > 0"
+                [disabled]="isMileageDownloading()"
+                aria-label="Download all matching mileage reports"
+                title="Download all matching mileage reports"
+                (click)="downloadAllMileageReports()"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              </button>
+            </div>
             <ng-container *ngFor="let report of downloadableMileageReports()">
               <div class="mileage-history__report">
                 <button
@@ -926,7 +974,6 @@
           <div>Generated</div>
           <div>Staff rows</div>
           <div>Driving miles</div>
-          <div>Direct miles</div>
           <div></div>
         </div>
         <div class="reports-table__row" *ngFor="let report of uploadedMileageReportRows()">
@@ -934,7 +981,6 @@
           <div>{{ formatMileageReportGeneratedDate(report) }}</div>
           <div>{{ report.rows.length }}</div>
           <div>{{ reportMileageTotal(report).toFixed(2) }}</div>
-          <div>{{ reportStraightLineMileageTotal(report).toFixed(2) }}</div>
           <div class="workers-table__actions">
             <button class="report-download-button" type="button" aria-label="Download uploaded mileage report" title="Download report" (click)="downloadMileageReport(report)">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
