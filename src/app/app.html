@@ -417,7 +417,7 @@
     <section class="worker-mileage-page" *ngIf="activePage() === 'worker-mileage'">
       <header class="reports-header">
         <h1>Workers Mileage Calculator</h1>
-        <p>Upload a visit worksheet and download calculated mileage split by visit month.</p>
+        <p>Upload a visit worksheet, optimise each time-frame route, and download daily and monthly mileage workbooks.</p>
       </header>
 
       <div class="mileage-upload-toolbar">
@@ -437,7 +437,7 @@
           </div>
 
           <div class="mileage-upload-card__intro">
-            <p>The workbook must include Staff Number, Date, Visit Time, and Address columns.</p>
+            <p>The workbook must include Staff Number, Date, Visit Time, and Address columns. Visits are optimised within each AM, Lunch, Tea, and Bed session.</p>
           </div>
 
           <div class="field mileage-upload-card__field">
@@ -555,9 +555,19 @@
             <div class="stat-card__meta">in this report</div>
           </article>
           <article class="stat-card">
-            <div class="stat-card__label">Driving mileage</div>
+            <div class="stat-card__label">Optimised mileage</div>
             <div class="stat-card__value">{{ selectedMileageTotal().toFixed(2) }}</div>
-            <div class="stat-card__meta">miles from uploaded visits</div>
+            <div class="stat-card__meta">miles after session routing</div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card__label">Original mileage</div>
+            <div class="stat-card__value">{{ selectedOriginalMileageTotal().toFixed(2) }}</div>
+            <div class="stat-card__meta">miles in uploaded order</div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-card__label">Mileage saved</div>
+            <div class="stat-card__value">{{ selectedMileageSavings().toFixed(2) }}</div>
+            <div class="stat-card__meta">miles reduced by optimisation</div>
           </article>
         </div>
 
@@ -565,12 +575,16 @@
           <div class="mileage-table__head">
             <div>Month</div>
             <div>Staff number</div>
-            <div>Driving mileage</div>
+            <div>Original mileage</div>
+            <div>Optimised mileage</div>
+            <div>Saved</div>
           </div>
           <div class="mileage-table__row" *ngFor="let row of filteredSelectedMileageRows()">
             <div>{{ formatMileageReportMonth(report) }}</div>
             <div>{{ row.staffNumber }}</div>
+            <div>{{ formatOriginalMileageRowValue(row) }}</div>
             <div>{{ formatMileageRowValue(row) }}</div>
+            <div>{{ formatMileageSavedRowValue(row) }}</div>
           </div>
         </div>
 

@@ -1852,7 +1852,7 @@ body {
 .mileage-table__head,
 .mileage-table__row {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) repeat(2, minmax(150px, 1fr));
+  grid-template-columns: minmax(140px, 1fr) minmax(120px, 0.9fr) repeat(3, minmax(130px, 0.9fr));
   align-items: center;
   gap: 16px;
   padding: 0 16px;
@@ -2442,7 +2442,7 @@ body {
 
   .mileage-table__head,
   .mileage-table__row {
-    min-width: 640px;
+    min-width: 760px;
   }
 
   .reports-table {

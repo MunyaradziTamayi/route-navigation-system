@@ -4,7 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { AdminService } from './core/admin.service';
 import { GeocodingService, type GeocodeResult } from './core/geocoding.service';
-import { MileageUploadService, type WorkerMileageReport, type WorkerMileageUpload, type WorkerMileageVisit } from './core/mileage-upload.service';
+import { MileageUploadService, type WorkerMileageReport, type WorkerMileageReportRow, type WorkerMileageUpload, type WorkerMileageVisit } from './core/mileage-upload.service';
 import { RouteService, type RouteRequest, type RouteResponse } from './core/route.service';
 import { VisitService, type VisitPayload, type VisitResponse } from './core/visit.service';
 import { WorkerService, type WorkerResponse } from './core/worker.service';
@@ -94,9 +94,9 @@ export class App {
     { label: 'Preparing workbook upload', percent: 8 },
     { label: 'Reading worksheet rows', percent: 24 },
     { label: 'Validating staff, dates, and addresses', percent: 42 },
-    { label: 'Matching visits to workers', percent: 58 },
-    { label: 'Calculating driving and direct mileage', percent: 76 },
-    { label: 'Building monthly mileage reports', percent: 92 }
+    { label: 'Splitting visits into time sessions', percent: 58 },
+    { label: 'Optimising session routes with Google', percent: 76 },
+    { label: 'Building daily and monthly mileage reports', percent: 92 }
   ];
   private mileageProgressTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -459,6 +459,17 @@ export class App {
       (total, row) => total + this.mileageValue(row),
       0
     )
+  );
+
+  readonly selectedOriginalMileageTotal = computed(() =>
+    this.filteredSelectedMileageRows().reduce(
+      (total, row) => total + this.originalMileageValue(row),
+      0
+    )
+  );
+
+  readonly selectedMileageSavings = computed(() =>
+    Math.max(0, this.selectedOriginalMileageTotal() - this.selectedMileageTotal())
   );
 
   constructor() {
@@ -1138,7 +1149,7 @@ export class App {
 
     this.isMileageUploading.set(true);
     this.startMileageUploadProgress();
-    this.mileageUploadMessage.set('Calculating mileage from the uploaded worksheet...');
+    this.mileageUploadMessage.set('Optimising visit routes from the uploaded worksheet...');
 
     try {
       const upload = await this.mileageUploadApi.upload(file, {
@@ -1727,6 +1738,14 @@ export class App {
     return this.formatMileageValue(this.mileageValue(row));
   }
 
+  formatOriginalMileageRowValue(row: { totalStraightLineMileageMiles?: number; totalStraightLineMileage?: number }): string {
+    return this.formatMileageValue(this.originalMileageValue(row));
+  }
+
+  formatMileageSavedRowValue(row: WorkerMileageReportRow): string {
+    return this.formatMileageValue(Math.max(0, this.originalMileageValue(row) - this.mileageValue(row)));
+  }
+
   formatMileageReportGeneratedDate(report: WorkerMileageReport): string {
     return this.formatGeneratedDateTime(report.createdAt) || 'Not set';
   }
@@ -1790,6 +1809,10 @@ export class App {
 
   private mileageValue(row: { totalMileageMiles?: number; totalMileage?: number }): number {
     return Number(row.totalMileageMiles ?? row.totalMileage ?? 0);
+  }
+
+  private originalMileageValue(row: { totalStraightLineMileageMiles?: number; totalStraightLineMileage?: number }): number {
+    return Number(row.totalStraightLineMileageMiles ?? row.totalStraightLineMileage ?? 0);
   }
 
   private formatGeneratedDate(value?: string): string {
