@@ -11,6 +11,9 @@ export type WorkerMileageReportRow = {
   totalStraightLineMileage?: number;
   totalStraightLineMileageKm?: number;
   totalStraightLineMileageMiles?: number;
+  totalSavedMileage?: number;
+  totalSavedMileageKm?: number;
+  totalSavedMileageMiles?: number;
   straightLineMileage?: number;
   straightLineMileageKm?: number;
   straightLineMileageMiles?: number;

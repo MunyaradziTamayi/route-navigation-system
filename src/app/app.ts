@@ -469,7 +469,10 @@ export class App {
   );
 
   readonly selectedMileageSavings = computed(() =>
-    Math.max(0, this.selectedOriginalMileageTotal() - this.selectedMileageTotal())
+    this.filteredSelectedMileageRows().reduce(
+      (total, row) => total + this.savedMileageValue(row),
+      0
+    )
   );
 
   constructor() {
@@ -1743,7 +1746,7 @@ export class App {
   }
 
   formatMileageSavedRowValue(row: WorkerMileageReportRow): string {
-    return this.formatMileageValue(Math.max(0, this.originalMileageValue(row) - this.mileageValue(row)));
+    return this.formatMileageValue(this.savedMileageValue(row));
   }
 
   formatMileageReportGeneratedDate(report: WorkerMileageReport): string {
@@ -1813,6 +1816,12 @@ export class App {
 
   private originalMileageValue(row: { totalStraightLineMileageMiles?: number; totalStraightLineMileage?: number }): number {
     return Number(row.totalStraightLineMileageMiles ?? row.totalStraightLineMileage ?? 0);
+  }
+
+  private savedMileageValue(row: WorkerMileageReportRow): number {
+    const saved = row.totalSavedMileageMiles ?? row.totalSavedMileage;
+    if (saved != null) return Number(saved);
+    return Math.max(0, this.originalMileageValue(row) - this.mileageValue(row));
   }
 
   private formatGeneratedDate(value?: string): string {
