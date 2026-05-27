@@ -76,6 +76,22 @@ type MileageUploadProgressStep = {
   percent: number;
 };
 
+type MileageDownloadKind = 'report' | 'master' | 'routes';
+
+type MileageReportMonth =
+  | 'January'
+  | 'February'
+  | 'March'
+  | 'April'
+  | 'May'
+  | 'June'
+  | 'July'
+  | 'August'
+  | 'September'
+  | 'October'
+  | 'November'
+  | 'December';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -97,6 +113,20 @@ export class App {
     { label: 'Splitting visits into time sessions', percent: 58 },
     { label: 'Optimising session routes with Google', percent: 76 },
     { label: 'Building daily and monthly mileage reports', percent: 92 }
+  ];
+  readonly mileageReportMonthOptions: MileageReportMonth[] = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
   ];
   private mileageProgressTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -154,7 +184,7 @@ export class App {
   readonly mileageUploads = signal<WorkerMileageUpload[]>([]);
   readonly selectedMileageReport = signal<WorkerMileageReport | null>(null);
   readonly isMileageReportSelectorOpen = signal(false);
-  readonly isMileageDownloading = signal(false);
+  readonly activeMileageDownload = signal<MileageDownloadKind | null>(null);
   readonly selectedWorkerMileageWorker = signal<CareWorker | null>(null);
   readonly selectedWorkerMileageVisits = signal<WorkerMileageVisit[]>([]);
   readonly isWorkerMileageLoading = signal(false);
@@ -433,6 +463,16 @@ export class App {
     return (report.rows ?? []).filter((row) => visibleStaff.has(row.staffNumber));
   });
 
+  readonly isMileageDownloading = computed(() =>
+    this.activeMileageDownload() !== null
+  );
+
+  readonly isMileageReportDownloading = computed(() => this.activeMileageDownload() === 'report');
+
+  readonly isMileageMasterDownloading = computed(() => this.activeMileageDownload() === 'master');
+
+  readonly isOptimizedRoutesDownloading = computed(() => this.activeMileageDownload() === 'routes');
+
   readonly uploadedMileageWorkerCount = computed(() => {
     const staff = new Set<string>();
     for (const report of this.mileageReports()) {
@@ -529,17 +569,21 @@ export class App {
       this.mileageFilterStaff.set(v);
     });
 
-    this.mileageReportMonthControl.valueChanges.subscribe((v) => {
-      this.mileageReportMonth.set(v);
-      this.refreshMileageReports();
-      this.refreshDownloadableMileageReports();
-    });
+    this.mileageReportMonthControl.valueChanges
+      .pipe(debounceTime(250), distinctUntilChanged())
+      .subscribe((v) => {
+        this.mileageReportMonth.set(v);
+        this.refreshMileageReports();
+        this.refreshDownloadableMileageReports();
+      });
 
-    this.mileageReportYearControl.valueChanges.subscribe((v) => {
-      this.mileageReportYear.set(v);
-      this.refreshMileageReports();
-      this.refreshDownloadableMileageReports();
-    });
+    this.mileageReportYearControl.valueChanges
+      .pipe(debounceTime(250), distinctUntilChanged())
+      .subscribe((v) => {
+        this.mileageReportYear.set(v);
+        this.refreshMileageReports();
+        this.refreshDownloadableMileageReports();
+      });
 
     this.workerHomeAddressControl.valueChanges
       .pipe(
@@ -1221,7 +1265,7 @@ export class App {
       return;
     }
 
-    this.isMileageDownloading.set(true);
+    this.activeMileageDownload.set('report');
     try {
       const result = await this.mileageUploadApi.downloadReport(report.id);
       this.downloadBlob(result.blob, this.mileageWorkbookFilename(report, result.filename));
@@ -1229,7 +1273,7 @@ export class App {
     } catch {
       this.showError(this.mileageUploadMessage, 'Failed to download the mileage workbook.');
     } finally {
-      this.isMileageDownloading.set(false);
+      this.activeMileageDownload.set(null);
     }
   }
 
@@ -1240,21 +1284,40 @@ export class App {
       return;
     }
 
-    this.isMileageDownloading.set(true);
+    this.activeMileageDownload.set('master');
     try {
-      for (const report of reports) {
-        if (report.id == null) continue;
-        const result = await this.mileageUploadApi.downloadReport(report.id);
-        this.downloadBlob(result.blob, this.mileageWorkbookFilename(report, result.filename));
-        await this.wait(160);
-      }
-
-      const workbookLabel = reports.length === 1 ? 'workbook' : 'workbooks';
-      this.showSuccess(this.mileageUploadMessage, `${reports.length} mileage ${workbookLabel} downloaded.`);
+      const result = await this.mileageUploadApi.downloadMasterReport({
+        month: this.mileageReportMonth(),
+        year: this.mileageReportYear()
+      });
+      this.downloadBlob(result.blob, result.filename || 'worker-mileage-master.xlsx');
+      this.showSuccess(this.mileageUploadMessage, 'Master mileage workbook downloaded.');
     } catch {
-      this.showError(this.mileageUploadMessage, 'Failed to download every mileage workbook.');
+      this.showError(this.mileageUploadMessage, 'Failed to download the master mileage workbook.');
     } finally {
-      this.isMileageDownloading.set(false);
+      this.activeMileageDownload.set(null);
+    }
+  }
+
+  async downloadOptimizedRoutes() {
+    const reports = this.downloadableFilteredMileageReports();
+    if (reports.length === 0) {
+      this.showError(this.mileageUploadMessage, 'No optimized routes match the current filters.');
+      return;
+    }
+
+    this.activeMileageDownload.set('routes');
+    try {
+      const result = await this.mileageUploadApi.downloadOptimizedRoutes({
+        month: this.mileageReportMonth(),
+        year: this.mileageReportYear()
+      });
+      this.downloadBlob(result.blob, result.filename || 'worker-mileage-optimized-routes.xlsx');
+      this.showSuccess(this.mileageUploadMessage, 'Optimized routes workbook downloaded.');
+    } catch {
+      this.showError(this.mileageUploadMessage, 'Failed to download the optimized routes workbook.');
+    } finally {
+      this.activeMileageDownload.set(null);
     }
   }
 
