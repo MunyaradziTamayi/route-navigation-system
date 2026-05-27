@@ -1333,9 +1333,38 @@ body {
 
 .report-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-top: 18px;
+}
+
+.report-summary--uploaded {
+  grid-template-columns: minmax(240px, 1.15fr) repeat(3, minmax(160px, 1fr));
+}
+
+.report-summary--uploaded .stat-card {
+  min-width: 0;
+}
+
+.report-summary--uploaded .stat-card--scope {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+}
+
+.report-summary--uploaded .stat-card__value--word {
+  max-width: 13ch;
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.reports-download-toolbar {
+  margin-top: 12px;
+  margin-bottom: 18px;
+}
+
+.reports-download-toolbar .workers-add {
+  min-height: 40px;
+  border-radius: 8px;
+  padding-inline: 16px;
 }
 
 .reports-table {
@@ -1381,6 +1410,11 @@ body {
 .reports-table--uploaded .reports-table__head,
 .reports-table--uploaded .reports-table__row {
   grid-template-columns: minmax(160px, 1.3fr) repeat(3, minmax(100px, 1fr)) minmax(120px, auto);
+}
+
+.reports-table--mileage-summary .reports-table__head,
+.reports-table--mileage-summary .reports-table__row {
+  grid-template-columns: minmax(180px, 1.3fr) repeat(3, minmax(140px, 1fr));
 }
 
 .reports-table--uploaded .workers-table__actions {
@@ -2425,6 +2459,14 @@ body {
   .mileage-summary,
   .worker-form__grid {
     grid-template-columns: 1fr;
+  }
+
+  .report-summary--uploaded {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-download-toolbar .workers-add {
+    width: 100%;
   }
 
   .mileage-result__header {

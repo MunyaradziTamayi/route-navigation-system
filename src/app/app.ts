@@ -65,6 +65,13 @@ type WorkerReportRow = {
   lastVisit: string;
 };
 
+type UploadedMileageStaffRow = {
+  staffNumber: string;
+  originalMileage: number;
+  optimizedMileage: number;
+  savedMileage: number;
+};
+
 type AppNotice = {
   id: number;
   type: 'success' | 'error';
@@ -217,10 +224,10 @@ export class App {
   readonly scheduleFormMessage = signal<string | null>(null);
   readonly pendingScheduleVisit = signal<ScheduleAssignment | null>(null);
   readonly assignmentMessage = signal<string | null>(null);
-  readonly reportFromControl = new FormControl(this.formatDateInput(this.today), {
+  readonly reportFromControl = new FormControl('', {
     nonNullable: true
   });
-  readonly reportToControl = new FormControl(this.formatDateInput(this.today), {
+  readonly reportToControl = new FormControl('', {
     nonNullable: true
   });
   readonly reportWorkerControl = new FormControl('all', { nonNullable: true });
@@ -243,8 +250,8 @@ export class App {
   private readonly scheduleFilterWorkerId = signal('');
   private readonly scheduleDate = signal('');
   private readonly scheduleSearch = signal('');
-  private readonly reportFromDate = signal(this.formatDateInput(this.today));
-  private readonly reportToDate = signal(this.formatDateInput(this.today));
+  private readonly reportFromDate = signal('');
+  private readonly reportToDate = signal('');
   private readonly reportWorkerId = signal('all');
   private readonly reportSearch = signal('');
   private readonly mileageFilterStaff = signal('');
@@ -304,8 +311,8 @@ export class App {
   );
 
   readonly reportVisits = computed(() => {
-    const from = this.dateOnlyTime(this.reportFromDate(), false);
-    const to = this.dateOnlyTime(this.reportToDate(), true);
+    const from = this.reportFromDate() ? this.dateOnlyTime(this.reportFromDate(), false) : Number.NEGATIVE_INFINITY;
+    const to = this.reportToDate() ? this.dateOnlyTime(this.reportToDate(), true) : Number.POSITIVE_INFINITY;
     const workerId = this.reportWorkerId();
     const query = this.reportSearch().trim().toLowerCase();
 
@@ -364,8 +371,8 @@ export class App {
   );
 
   readonly uploadedMileageReportRows = computed(() => {
-    const from = this.dateOnlyTime(this.reportFromDate(), false);
-    const to = this.dateOnlyTime(this.reportToDate(), true);
+    const from = this.reportFromDate() ? this.dateOnlyTime(this.reportFromDate(), false) : Number.NEGATIVE_INFINITY;
+    const to = this.reportToDate() ? this.dateOnlyTime(this.reportToDate(), true) : Number.POSITIVE_INFINITY;
     const workerId = this.reportWorkerId();
     const worker = workerId === 'all' ? null : this.workers().find((item) => item.id === workerId);
     const staffNumber = worker?.staffNumber?.trim().toLowerCase() ?? '';
@@ -393,10 +400,52 @@ export class App {
   });
 
   readonly uploadedMileageReportsTotal = computed(() =>
-    this.uploadedMileageReportRows().reduce(
-      (total, report) => total + this.reportMileageTotal(report),
-      0
-    )
+    this.uploadedMileageStaffRows().reduce((total, row) => total + row.optimizedMileage, 0)
+  );
+
+  readonly uploadedMileageOriginalTotal = computed(() =>
+    this.uploadedMileageStaffRows().reduce((total, row) => total + row.originalMileage, 0)
+  );
+
+  readonly uploadedMileageSavedTotal = computed(() =>
+    this.uploadedMileageStaffRows().reduce((total, row) => total + row.savedMileage, 0)
+  );
+
+  readonly uploadedMileageStaffRows = computed<UploadedMileageStaffRow[]>(() => {
+    const rows = new Map<string, UploadedMileageStaffRow>();
+
+    for (const report of this.uploadedMileageReportRows()) {
+      for (const reportRow of report.rows ?? []) {
+        const staffNumber = reportRow.staffNumber?.trim();
+        if (!staffNumber) continue;
+
+        const key = staffNumber.toLowerCase();
+        const row = rows.get(key) ?? {
+          staffNumber,
+          originalMileage: 0,
+          optimizedMileage: 0,
+          savedMileage: 0
+        };
+
+        row.originalMileage += this.originalMileageValue(reportRow);
+        row.optimizedMileage += this.mileageValue(reportRow);
+        row.savedMileage += this.savedMileageValue(reportRow);
+        rows.set(key, row);
+      }
+    }
+
+    return Array.from(rows.values()).sort((a, b) => a.staffNumber.localeCompare(b.staffNumber));
+  });
+
+  readonly hasReportFilter = computed(() =>
+    !!this.reportFromDate() ||
+    !!this.reportToDate() ||
+    this.reportWorkerId() !== 'all' ||
+    !!this.reportSearch().trim()
+  );
+
+  readonly uploadedMileageReportScopeLabel = computed(() =>
+    this.hasReportFilter() ? 'Selected months' : 'All uploaded months'
   );
 
   readonly distanceText = computed(() => {
@@ -1326,6 +1375,41 @@ export class App {
     } finally {
       this.activeMileageDownload.set(null);
     }
+  }
+
+  downloadUploadedMileageSummary() {
+    const rows = this.uploadedMileageStaffRows();
+    if (rows.length === 0) {
+      this.showError(this.mileageUploadMessage, 'No uploaded mileage rows match the current filters.');
+      return;
+    }
+
+    const csvRows = [
+      ['Staff Number', 'Original Mileage', 'Optimised Mileage', 'Mileage Saved'],
+      ...rows.map((row) => [
+        row.staffNumber,
+        row.originalMileage.toFixed(2),
+        row.optimizedMileage.toFixed(2),
+        row.savedMileage.toFixed(2)
+      ])
+    ];
+    const csv = csvRows.map((row) => row.map((value) => this.csvCell(value)).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    this.downloadBlob(blob, `uploaded-mileage-summary-${this.reportFilenameDatePart()}.csv`);
+    this.showSuccess(this.mileageUploadMessage, 'Mileage summary downloaded.');
+  }
+
+  private csvCell(value: string): string {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+
+  private reportFilenameDatePart(): string {
+    const from = this.reportFromDate();
+    const to = this.reportToDate();
+    if (from && to) return `${from}-to-${to}`;
+    if (from) return `from-${from}`;
+    if (to) return `to-${to}`;
+    return 'all-months';
   }
 
   async createOrUpdateVisit() {

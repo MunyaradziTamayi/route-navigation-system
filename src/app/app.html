@@ -993,25 +993,56 @@
         </article>
       </div>
 
-      <div class="report-summary" *ngIf="uploadedMileageReportRows().length > 0">
-        <article class="stat-card">
-          <div class="stat-card__label">Uploaded reports</div>
-          <div class="stat-card__value">{{ uploadedMileageReportRows().length }}</div>
-          <div class="stat-card__meta">from worker mileage optimizer</div>
+      <div class="report-summary report-summary--uploaded" *ngIf="uploadedMileageStaffRows().length > 0">
+        <article class="stat-card stat-card--scope">
+          <div class="stat-card__label">Mileage scope</div>
+          <div class="stat-card__value stat-card__value--word">{{ uploadedMileageReportScopeLabel() }}</div>
+          <div class="stat-card__meta">{{ uploadedMileageReportRows().length }} monthly report{{ uploadedMileageReportRows().length === 1 ? '' : 's' }}</div>
         </article>
         <article class="stat-card">
-          <div class="stat-card__label">Uploaded mileage</div>
+          <div class="stat-card__label">Original mileage</div>
+          <div class="stat-card__value">{{ uploadedMileageOriginalTotal().toFixed(2) }}</div>
+          <div class="stat-card__meta">miles before optimisation</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Optimised mileage</div>
           <div class="stat-card__value">{{ uploadedMileageReportsTotal().toFixed(2) }}</div>
-          <div class="stat-card__meta">miles in selected data months</div>
+          <div class="stat-card__meta">miles after routing</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-card__label">Mileage saved</div>
+          <div class="stat-card__value">{{ uploadedMileageSavedTotal().toFixed(2) }}</div>
+          <div class="stat-card__meta">miles reduced</div>
         </article>
       </div>
 
-      <div class="reports-table reports-table--uploaded" *ngIf="uploadedMileageReportRows().length > 0">
+      <div class="mileage-upload-toolbar reports-download-toolbar" *ngIf="uploadedMileageStaffRows().length > 0">
+        <button class="workers-add app-primary-action" type="button" (click)="downloadUploadedMileageSummary()">
+          Download mileage summary
+        </button>
+      </div>
+
+      <div class="reports-table reports-table--mileage-summary" *ngIf="uploadedMileageStaffRows().length > 0">
+        <div class="reports-table__head">
+          <div>Staff number</div>
+          <div>Original mileage</div>
+          <div>Optimised mileage</div>
+          <div>Saved</div>
+        </div>
+        <div class="reports-table__row" *ngFor="let row of uploadedMileageStaffRows()">
+          <div>{{ row.staffNumber }}</div>
+          <div>{{ row.originalMileage.toFixed(2) }}</div>
+          <div>{{ row.optimizedMileage.toFixed(2) }}</div>
+          <div>{{ row.savedMileage.toFixed(2) }}</div>
+        </div>
+      </div>
+
+      <div class="reports-table reports-table--uploaded" *ngIf="hasReportFilter() && uploadedMileageReportRows().length > 0">
         <div class="reports-table__head">
           <div>Data month</div>
           <div>Generated</div>
           <div>Staff rows</div>
-          <div>Driving miles</div>
+          <div>Optimised miles</div>
           <div></div>
         </div>
         <div class="reports-table__row" *ngFor="let report of uploadedMileageReportRows()">
@@ -1065,7 +1096,7 @@
         </article>
       </div>
 
-      <div class="reports-empty" *ngIf="reportRows().length === 0 && uploadedMileageReportRows().length === 0">
+      <div class="reports-empty" *ngIf="reportRows().length === 0 && uploadedMileageStaffRows().length === 0">
         <div class="reports-empty__icon">
           <span></span>
           <span></span>
