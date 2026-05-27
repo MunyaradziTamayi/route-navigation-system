@@ -532,17 +532,17 @@
               *ngIf="report.id != null"
               class="mileage-result__download"
               type="button"
-              [disabled]="isMileageDownloading()"
+              [disabled]="isMileageReportDownloading(report)"
               (click)="downloadMileageReport(report)"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-              {{ isMileageReportDownloading() ? 'Downloading...' : 'Download workbook' }}
+              {{ isMileageReportDownloading(report) ? 'Downloading...' : 'Download workbook' }}
             </button>
             <button
               *ngIf="report.reportMonth === 'all' && downloadableFilteredMileageReports().length > 0"
               class="mileage-result__download"
               type="button"
-              [disabled]="isMileageDownloading()"
+              [disabled]="isMileageMasterDownloading()"
               (click)="downloadAllMileageReports()"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
@@ -552,7 +552,7 @@
               *ngIf="report.reportMonth === 'all' && downloadableFilteredMileageReports().length > 0"
               class="mileage-result__download"
               type="button"
-              [disabled]="isMileageDownloading()"
+              [disabled]="isOptimizedRoutesDownloading()"
               (click)="downloadOptimizedRoutes()"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
@@ -645,7 +645,7 @@
                 class="mileage-history__download"
                 type="button"
                 *ngIf="downloadableFilteredMileageReports().length > 0"
-                [disabled]="isMileageDownloading()"
+                [disabled]="isMileageMasterDownloading()"
                 aria-label="Download master mileage workbook"
                 title="Download master mileage workbook"
                 (click)="downloadAllMileageReports()"
@@ -656,7 +656,7 @@
                 class="mileage-history__download"
                 type="button"
                 *ngIf="downloadableFilteredMileageReports().length > 0"
-                [disabled]="isMileageDownloading()"
+                [disabled]="isOptimizedRoutesDownloading()"
                 aria-label="Download optimized routes workbook"
                 title="Download optimized routes workbook"
                 (click)="downloadOptimizedRoutes()"
@@ -678,7 +678,7 @@
                 <button
                   class="mileage-history__download"
                   type="button"
-                  [disabled]="isMileageDownloading()"
+                  [disabled]="isMileageReportDownloading(report)"
                   [attr.aria-label]="'Download ' + formatMileageReportFileLabel(report)"
                   (click)="downloadMileageReport(report)"
                 >
@@ -1020,9 +1020,16 @@
           <div>{{ report.rows.length }}</div>
           <div>{{ reportMileageTotal(report).toFixed(2) }}</div>
           <div class="workers-table__actions">
-            <button class="report-download-button" type="button" aria-label="Download uploaded mileage report" title="Download report" (click)="downloadMileageReport(report)">
+            <button
+              class="report-download-button"
+              type="button"
+              aria-label="Download uploaded mileage report"
+              title="Download report"
+              [disabled]="isMileageReportDownloading(report)"
+              (click)="downloadMileageReport(report)"
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-              <span>Download</span>
+              <span>{{ isMileageReportDownloading(report) ? 'Downloading...' : 'Download' }}</span>
             </button>
           </div>
         </div>

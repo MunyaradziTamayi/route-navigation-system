@@ -76,7 +76,7 @@ type MileageUploadProgressStep = {
   percent: number;
 };
 
-type MileageDownloadKind = 'report' | 'master' | 'routes';
+type MileageDownloadKind = `report:${string}` | 'master' | 'routes';
 
 type MileageReportMonth =
   | 'January'
@@ -467,11 +467,18 @@ export class App {
     this.activeMileageDownload() !== null
   );
 
-  readonly isMileageReportDownloading = computed(() => this.activeMileageDownload() === 'report');
+  isMileageReportDownloading(report = this.selectedMileageReport()): boolean {
+    if (!report || report.id == null) return false;
+    return this.activeMileageDownload() === this.mileageReportDownloadKey(report);
+  }
 
-  readonly isMileageMasterDownloading = computed(() => this.activeMileageDownload() === 'master');
+  isMileageMasterDownloading(): boolean {
+    return this.activeMileageDownload() === 'master';
+  }
 
-  readonly isOptimizedRoutesDownloading = computed(() => this.activeMileageDownload() === 'routes');
+  isOptimizedRoutesDownloading(): boolean {
+    return this.activeMileageDownload() === 'routes';
+  }
 
   readonly uploadedMileageWorkerCount = computed(() => {
     const staff = new Set<string>();
@@ -1265,7 +1272,7 @@ export class App {
       return;
     }
 
-    this.activeMileageDownload.set('report');
+    this.activeMileageDownload.set(this.mileageReportDownloadKey(report));
     try {
       const result = await this.mileageUploadApi.downloadReport(report.id);
       this.downloadBlob(result.blob, this.mileageWorkbookFilename(report, result.filename));
@@ -1938,6 +1945,10 @@ export class App {
       return String(report.reportMonth ?? '') === String(target.reportMonth ?? '');
     }
     return String(report.id ?? report.reportMonth ?? '') === String(target);
+  }
+
+  private mileageReportDownloadKey(report: WorkerMileageReport): MileageDownloadKind {
+    return `report:${String(report.id)}`;
   }
 
   private startMileageUploadProgress() {
