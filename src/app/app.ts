@@ -1266,6 +1266,7 @@ export class App {
       this.mileageUploads.set([upload, ...this.mileageUploads().filter((row) => String(row.id) !== String(upload.id))]);
       this.downloadableMileageReports.set(reports);
       this.mileageReports.set(totals.length > 0 ? totals : reports);
+      this.refreshMileageReports(report?.id ?? report?.reportMonth);
       this.completeMileageUploadProgress();
       await this.wait(450);
       this.isMileageUploadOpen.set(false);

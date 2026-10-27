@@ -88,7 +88,8 @@ export class MileageUploadService {
 
   async upload(file: File, filters: MileageReportFilters = {}): Promise<WorkerMileageUpload> {
     const body = new FormData();
-    const params = this.paramsFromFilters(filters);
+    // Large worksheets produce tens of thousands of visits; fetch them via /totals after upload instead.
+    const params = this.paramsFromFilters(filters).set('includeVisits', 'false');
 
     body.append('file', file, file.name);
 
